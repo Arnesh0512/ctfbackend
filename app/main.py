@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.middleware import OriginGuard
 import app.models.admin
 import app.models.content
 import app.models.game
@@ -31,6 +32,10 @@ def create_app() -> FastAPI:
             allow_credentials=True,
             allow_methods=["GET", "POST", "PATCH", "DELETE"],
             allow_headers=["*"],
+        )
+        app.add_middleware(
+            OriginGuard,
+            allowed=settings.frontend_origins,
         )
 
     @app.get(f"{prefix}/health", tags=["system"])
