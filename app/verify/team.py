@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import verify_password
 from app.models.team import Team
 
 
@@ -20,6 +21,29 @@ async def verify_team_username(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Username '{username}' is already in use.",
         )
+
+
+async def verify_team_credentials(
+    username: str,
+    password: str,
+    db: AsyncSession,
+) -> Team:
+    """Verify team login credentials against the database."""
+    username = username.strip()
+    team = await db.scalar(select(Team).where(Team.username == username))
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid team credentials",
+        )
+
+    if not verify_password(password, team.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid team credentials",
+        )
+
+    return team
 
 
 async def verify_team_payload(

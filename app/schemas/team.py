@@ -46,6 +46,22 @@ class TeamOut(BaseModel):
     skip: uuid.UUID | None = None
 
 
+# Team Login Request
+class TeamLoginIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(..., min_length=1, max_length=256, description="Team username")
+    password: str = Field(..., min_length=1, max_length=256, description="Team password")
+
+
+# Team Login Response with JWT
+class TeamLoginOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    team_id: uuid.UUID
+    role: str = "team"
+
+
 # Team authentication & session models
 class TeamLogin(BaseModel):
     username: str = Field(..., min_length=1, max_length=64)

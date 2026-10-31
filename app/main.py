@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import admin_router, events_router
+from app.routers import admin_router, events_router, teams_router
 
 
 def create_app() -> FastAPI:
@@ -29,8 +29,9 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok", "service": "mayasabha-ctf-backend"}
 
-    # Include Admin and Events routers
+    # Include Admin, Teams, and Events routers
     app.include_router(admin_router, prefix=prefix)
+    app.include_router(teams_router, prefix=prefix)
     app.include_router(events_router, prefix=prefix)
 
     return app
