@@ -4,11 +4,12 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.deps import DB
 from app.models.team import Team
-from app.schemas.admin import AdminLoginIn, AdminLoginOut
+from app.schemas.admin import AdminLoginIn, AdminLoginOut, AdminTeamItemOut
 from app.schemas.team import CreateTeamIn, TeamOut
 from app.verify import (
     create_access_token,
@@ -89,3 +90,35 @@ async def create_team(
     await db.refresh(new_team)
 
     return TeamOut.model_validate(new_team)
+
+
+# ==========================================
+# Admin Route 3: Fetch All Teams (Requires Admin JWT)
+# ==========================================
+@router.get(
+    "/teams",
+    response_model=list[AdminTeamItemOut],
+    summary="Fetch all teams (Admin only)",
+)
+async def get_all_teams(
+    db: DB,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> list[AdminTeamItemOut]:
+    """Fetch all teams with team_name, username, password, and leader_name."""
+    token = credentials.credentials
+    payload = verify_access_token(token)
+    await verify_admin_payload(payload, db)
+
+    stmt = select(Team).order_by(Team.team_name.asc())
+    teams = (await db.scalars(stmt)).all()
+
+    return [
+        AdminTeamItemOut(
+            team_id=team.team_id,
+            team_name=team.team_name,
+            username=team.username,
+            password=team.password,
+            leader_name=team.leader_details.get("name", "") if team.leader_details else "",
+        )
+        for team in teams
+    ]

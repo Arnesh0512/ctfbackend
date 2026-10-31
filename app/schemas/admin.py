@@ -27,6 +27,17 @@ class AdminSession(BaseModel):
     admin_name: str
 
 
+# Team credentials list item for admin
+class AdminTeamItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    team_id: uuid.UUID
+    team_name: str
+    username: str
+    password: str
+    leader_name: str
+
+
 # Team Edit by Admin
 class TeamUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")

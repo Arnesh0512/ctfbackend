@@ -39,18 +39,6 @@ Authenticates an administrator with preexisting database credentials and returns
 }
 ```
 
-### JWT Token Claims
-The generated token is signed using the 64-byte `JWT_SECRET` in `.env` using HMAC-SHA256 (`HS256`):
-```json
-{
-  "admin_id": "c0000000-0000-0000-0000-000000000001",
-  "role": "admin",
-  "admin_name": "admin",
-  "iat": 1793443161,
-  "exp": 1793457561
-}
-```
-
 ---
 
 ## Admin Route 2: Create Team
@@ -59,6 +47,7 @@ Creates a new team login in the CTF event with user-supplied credentials and aut
 
 * **Method:** `POST`
 * **Path:** `/admin/teams`
+* **Headers:** `Authorization: Bearer <admin_token>`
 * **Status Code:** `201 Created`
 * **Tags:** `admin`
 
@@ -89,45 +78,37 @@ Creates a new team login in the CTF event with user-supplied credentials and aut
 }
 ```
 
-### Autofilled Defaults (Internal)
-When creating the team, the system automatically assigns:
-* `team_id`: Generated `UUIDv4`
-* `password`: Hashed using `argon2`
-* `points`: `0.00`
-* `powerups_used`: `0`
-* `playthrough`: `"00:00:00"` (time)
-* `has_reached_delhi`: `false` (boolean)
-* `current_path_id`: `null`
-* `current_question_id`: `null`
-* `frozen_until`: `null`
-* `developer_time`: `"00:00:00"` (time)
-* `skip`: `null`
+---
 
-### Response Body (`201 Created`)
+## Admin Route 3: Fetch All Teams
+
+Fetches all teams with their display name, login username, password hash, and team leader name.
+
+* **Method:** `GET`
+* **Path:** `/admin/teams`
+* **Headers:** `Authorization: Bearer <admin_token>`
+* **Status Code:** `200 OK`
+* **Tags:** `admin`
+
+### Response Body (`200 OK`)
 
 ```json
-{
-  "team_id": "a37e11d5-eafa-464d-91e4-95dc941ad371",
-  "team_name": "Garuda CTF",
-  "team_members": ["Arnesh", "Rohan"],
-  "leader_details": {
-    "name": "Arnesh Leader",
-    "contact": "+91 9876543210",
-    "email": "leader@garuda.in",
-    "enrollment": "05116403221",
-    "college": "USICT"
+[
+  {
+    "team_id": "95a65100-0000-0000-0000-000000000001",
+    "team_name": "Full Leader Team",
+    "username": "team_95a651",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$...",
+    "leader_name": "Arnesh Leader"
   },
-  "username": "garuda_2026",
-  "points": "0.00",
-  "powerups_used": 0,
-  "playthrough": "00:00:00",
-  "has_reached_delhi": false,
-  "current_path_id": null,
-  "current_question_id": null,
-  "frozen_until": null,
-  "developer_time": "00:00:00",
-  "skip": null
-}
+  {
+    "team_id": "4b0bc9bf-deb9-4dbc-b7e9-6fdb83ded7f7",
+    "team_name": "IEEE Alpha Squad",
+    "username": "team_ieee_942405",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$...",
+    "leader_name": "Arnesh Leader"
+  }
+]
 ```
 
 ---
@@ -136,6 +117,6 @@ When creating the team, the system automatically assigns:
 
 | Status Code | Reason | Example Response |
 | :--- | :--- | :--- |
-| `401 Unauthorized` | Invalid `admin_name` or `passcode` | `{"detail": "Invalid admin credentials"}` |
-| `409 Conflict` | Username already in use | `{"detail": "Username 'garuda_2026' is already in use."}` |
-| `422 Unprocessable Entity` | Missing input fields | `{"detail": [{"loc": ["body", "passcode"], "msg": "Field required"}]}` |
+| `401 Unauthorized` | Missing, invalid, or expired JWT Bearer token | `{"detail": "Not authenticated"}` |
+| `403 Forbidden` | JWT does not have admin privileges | `{"detail": "Forbidden: Admin privilege required"}` |
+| `409 Conflict` | Team username already in use | `{"detail": "Username 'garuda_2026' is already in use."}` |
