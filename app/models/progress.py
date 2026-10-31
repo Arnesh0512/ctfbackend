@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.enums import QuestionStatus, str_enum
 
 
 class TeamQuestionState(Base):
@@ -21,7 +22,9 @@ class TeamQuestionState(Base):
     question_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("questions.question_id", ondelete="CASCADE"), primary_key=True
     )
-    status: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[QuestionStatus] = mapped_column(
+        str_enum(QuestionStatus), nullable=False, default=QuestionStatus.ACTIVE
+    )
     attempts_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     extra_retries: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     hint1_owned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

@@ -3,26 +3,10 @@ from enum import StrEnum
 from sqlalchemy import Enum
 
 
-class GameStatus(StrEnum):
-    NOT_STARTED = "not_started"
-    RUNNING = "running"
-    PAUSED = "paused"
-    ENDED = "ended"
-
-
 class QuestionStatus(StrEnum):
     ACTIVE = "active"
     SOLVED = "solved"
     SKIPPED = "skipped"
-
-
-class LedgerReason(StrEnum):
-    SOLVE = "solve"
-    HINT = "hint"
-    RETRY = "retry"
-    SKIP = "skip"
-    PATH_SWITCH = "path_switch"
-    ADMIN_ADJUST = "admin_adjust"
 
 
 class QuestionEvent(StrEnum):

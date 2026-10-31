@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.clock import utcnow
 from app.models.base import Base
+from app.models.enums import PathEvent, QuestionEvent, str_enum
 
 
 class TeamLog(Base):
@@ -23,7 +24,7 @@ class TeamLog(Base):
     question_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("questions.question_id", ondelete="SET NULL"), nullable=True
     )
-    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    event_type: Mapped[QuestionEvent] = mapped_column(str_enum(QuestionEvent), nullable=False)
     created_at: Mapped[datetime] = mapped_column(primary_key=True, default=utcnow)
     points: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
 
@@ -44,6 +45,6 @@ class TeamPathEvent(Base):
     question_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("questions.question_id", ondelete="SET NULL"), nullable=True
     )
-    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    event_type: Mapped[PathEvent] = mapped_column(str_enum(PathEvent), nullable=False)
     created_at: Mapped[datetime] = mapped_column(primary_key=True, default=utcnow)
     points: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
