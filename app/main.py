@@ -13,6 +13,7 @@ def create_app() -> FastAPI:
         docs_url=f"{prefix}/docs" if docs else None,
         redoc_url=None,
         openapi_url=f"{prefix}/openapi.json" if docs else None,
+        swagger_ui_parameters={"persistAuthorization": True},
     )
 
     if settings.frontend_origins:

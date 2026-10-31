@@ -2,7 +2,8 @@ import uuid
 from datetime import time
 from decimal import Decimal
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.security import hash_password
 from app.deps import DB
@@ -11,15 +12,19 @@ from app.schemas.admin import AdminLoginIn, AdminLoginOut
 from app.schemas.team import CreateTeamIn, TeamOut
 from app.verify import (
     create_access_token,
+    verify_access_token,
     verify_admin_credentials,
+    verify_admin_payload,
     verify_team_username,
 )
+
+security = HTTPBearer()
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 # ==========================================
-# Admin Route 1: Admin Login
+# Admin Route 1: Admin Login (Public)
 # ==========================================
 @router.post("/login", response_model=AdminLoginOut, summary="Admin Login")
 async def admin_login(body: AdminLoginIn, db: DB) -> AdminLoginOut:
@@ -41,7 +46,7 @@ async def admin_login(body: AdminLoginIn, db: DB) -> AdminLoginOut:
 
 
 # ==========================================
-# Admin Route 2: Create Team
+# Admin Route 2: Create Team (Requires Admin JWT)
 # ==========================================
 @router.post(
     "/teams",
@@ -49,8 +54,16 @@ async def admin_login(body: AdminLoginIn, db: DB) -> AdminLoginOut:
     status_code=status.HTTP_201_CREATED,
     summary="Create a new team",
 )
-async def create_team(body: CreateTeamIn, db: DB) -> TeamOut:
-    """Create a new team with autofilled default state fields."""
+async def create_team(
+    body: CreateTeamIn,
+    db: DB,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> TeamOut:
+    """Create a new team with autofilled default state fields (Requires Admin JWT)."""
+    token = credentials.credentials
+    payload = verify_access_token(token)
+    await verify_admin_payload(payload, db)
+
     await verify_team_username(body.username, db)
 
     new_team = Team(
