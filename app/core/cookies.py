@@ -8,15 +8,20 @@ from app.core.security import Role
 TEAM_COOKIE = "team_token"
 ADMIN_COOKIE = "admin_token"
 
-_NAMES: dict[Role, str] = {"team": TEAM_COOKIE, "admin": ADMIN_COOKIE}
+_NAMES: dict[Role, str] = {
+    "team": TEAM_COOKIE,
+    "admin": ADMIN_COOKIE,
+}
 
 
 def _options(role: Role) -> dict[str, Any]:
+    prefix = settings.api_prefix.rstrip("/")
+    path = f"{prefix}/admin" if role == "admin" else (f"{prefix}/" if prefix else "/")
     return {
-        "path": "/",
+        "path": path,
         "secure": settings.cookie_secure,
         "httponly": True,
-        "samesite": "lax",
+        "samesite": "strict",
     }
 
 
@@ -31,5 +36,5 @@ def set_auth_cookie(response: Response, role: Role, token: str) -> None:
 
 
 def clear_auth_cookie(response: Response, role: Role) -> None:
-    """Delete the authentication cookie."""
-    response.delete_cookie(_NAMES[role], path="/")
+    """Delete the authentication cookie using matching path and flags."""
+    response.delete_cookie(_NAMES[role], **_options(role))
