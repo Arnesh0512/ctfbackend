@@ -62,6 +62,16 @@ class TeamLoginOut(BaseModel):
     role: str = "team"
 
 
+# Team Profile Response
+class TeamProfileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    team_id: uuid.UUID
+    team_name: str
+    team_members: list[str] = Field(default_factory=list, description="List of team members")
+    leader_details: LeaderDetails = Field(..., description="Details of the team leader")
+
+
 # Team authentication & session models
 class TeamLogin(BaseModel):
     username: str = Field(..., min_length=1, max_length=64)

@@ -55,7 +55,34 @@ The generated token is signed using the 64-byte `JWT_SECRET` in `.env` with HMAC
 }
 ```
 
-This JWT is used by all other team routes in the backend for authentication.
+---
+
+## Team Route 2: Get Team Profile
+
+Fetches the profile details of the authenticated team using their JWT access token.
+
+* **Method:** `GET`
+* **Path:** `/teams/profile`
+* **Authentication:** **JWT Bearer Required** (`Authorization: Bearer <team_token>`)
+* **Status Code:** `200 OK`
+* **Tags:** `teams`
+
+### Response Body (`200 OK`)
+
+```json
+{
+  "team_id": "a37e11d5-eafa-464d-91e4-95dc941ad371",
+  "team_name": "Garuda CTF",
+  "team_members": ["Arnesh", "Rohan"],
+  "leader_details": {
+    "name": "Arnesh Leader",
+    "contact": "+91 9876543210",
+    "email": "leader@garuda.in",
+    "enrollment": "05116403221",
+    "college": "USICT"
+  }
+}
+```
 
 ---
 
@@ -63,5 +90,7 @@ This JWT is used by all other team routes in the backend for authentication.
 
 | Status Code | Reason | Example Response |
 | :--- | :--- | :--- |
-| `401 Unauthorized` | Invalid username or password | `{"detail": "Invalid team credentials"}` |
+| `401 Unauthorized` | Invalid username/password on login, or missing/expired JWT | `{"detail": "Not authenticated"}` |
+| `403 Forbidden` | Valid JWT provided, but role is not `team` (e.g. admin token used) | `{"detail": "Forbidden: Team privilege required"}` |
+| `404 Not Found` | Team associated with token no longer exists in database | `{"detail": "Team not found"}` |
 | `422 Unprocessable Entity` | Missing input fields | `{"detail": [{"loc": ["body", "password"], "msg": "Field required"}]}` |

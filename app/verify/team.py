@@ -51,13 +51,26 @@ async def verify_team_payload(
     db: AsyncSession,
 ) -> tuple[Team, uuid.UUID, str]:
     """Verify that decoded token payload represents a valid active team in database."""
-    team_id_raw = payload.get("team_id")
     role = payload.get("role")
+    team_id_raw = payload.get("team_id")
 
-    if not team_id_raw or role != "team":
+    if not role:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload for team",
+            detail="Invalid token payload",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if role != "team":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Team privilege required",
+        )
+
+    if not team_id_raw:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing team identifier in token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

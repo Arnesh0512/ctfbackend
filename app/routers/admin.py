@@ -60,7 +60,7 @@ async def create_team(
     db: DB,
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> TeamOut:
-    """Create a new team with autofilled default state fields (Requires Admin JWT)."""
+    """Create a new team with autofilled default state fields."""
     token = credentials.credentials
     payload = verify_access_token(token)
     await verify_admin_payload(payload, db)
@@ -98,7 +98,7 @@ async def create_team(
 @router.get(
     "/teams",
     response_model=list[AdminTeamItemOut],
-    summary="Fetch all teams (Admin only)",
+    summary="Fetch all teams",
 )
 async def get_all_teams(
     db: DB,

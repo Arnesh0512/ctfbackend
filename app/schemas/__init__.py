@@ -14,6 +14,7 @@ from app.schemas.team import (
     TeamLoginOut,
     TeamMe,
     TeamOut,
+    TeamProfileOut,
     TeamSession,
 )
 
@@ -30,6 +31,7 @@ __all__ = [
     "TeamLoginOut",
     "TeamMe",
     "TeamOut",
+    "TeamProfileOut",
     "TeamSession",
     "TeamUpdate",
 ]
