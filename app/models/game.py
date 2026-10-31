@@ -21,8 +21,8 @@ class StorePrice(Base):
     __tablename__ = "store_prices"
 
     power_up: Mapped[str] = mapped_column(String(64), primary_key=True)
-    value: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
-    multiplier: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    value: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    multiplier: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
 
 
 class FinalLeaderboard(Base):
@@ -32,5 +32,5 @@ class FinalLeaderboard(Base):
     team_name: Mapped[str] = mapped_column(String(256), nullable=False)
     has_reached_delhi: Mapped[bool] = mapped_column(Boolean, nullable=False)
     playthrough: Mapped[time] = mapped_column(Time, nullable=False)
-    points: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    points: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     power_ups_used: Mapped[int] = mapped_column(Integer, nullable=False)

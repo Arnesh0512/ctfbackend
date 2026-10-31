@@ -25,7 +25,7 @@ class TeamLog(Base):
     )
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(primary_key=True, default=utcnow)
-    points: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True, default=None)
+    points: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
 
 
 class TeamPathEvent(Base):
@@ -46,4 +46,4 @@ class TeamPathEvent(Base):
     )
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(primary_key=True, default=utcnow)
-    points: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True, default=None)
+    points: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)

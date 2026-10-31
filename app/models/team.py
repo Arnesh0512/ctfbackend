@@ -29,7 +29,7 @@ class Team(Base):
     leader_details: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     username: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(String(256), nullable=False)
-    points: Mapped[Decimal] = mapped_column(Numeric, nullable=False, default=Decimal("0.00"))
+    points: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
     powerups_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     playthrough: Mapped[time] = mapped_column(Time, nullable=False, default=time(0, 0, 0))
     has_reached_delhi: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

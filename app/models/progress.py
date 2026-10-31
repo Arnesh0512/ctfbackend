@@ -26,6 +26,6 @@ class TeamQuestionState(Base):
     extra_retries: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     hint1_owned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     hint2_owned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    points_awarded: Mapped[Decimal] = mapped_column(Numeric, nullable=False, default=Decimal(0))
+    points_awarded: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
     viewed_at: Mapped[datetime | None] = mapped_column(nullable=True)
     solved_at: Mapped[datetime | None] = mapped_column(nullable=True)
