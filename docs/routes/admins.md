@@ -82,7 +82,7 @@ Creates a new team login in the CTF event with user-supplied credentials and aut
 
 ## Admin Route 3: Fetch All Teams
 
-Fetches all teams with their display name, login username, password hash, and team leader name.
+Fetches all teams with their display name, login username, password hash, leader name, and leader enrollment.
 
 * **Method:** `GET`
 * **Path:** `/admin/teams`
@@ -99,14 +99,16 @@ Fetches all teams with their display name, login username, password hash, and te
     "team_name": "Full Leader Team",
     "username": "team_95a651",
     "password": "$argon2id$v=19$m=65536,t=3,p=4$...",
-    "leader_name": "Arnesh Leader"
+    "leader_name": "Arnesh Leader",
+    "leader_enrollment": "05116403221"
   },
   {
     "team_id": "4b0bc9bf-deb9-4dbc-b7e9-6fdb83ded7f7",
     "team_name": "IEEE Alpha Squad",
     "username": "team_ieee_942405",
     "password": "$argon2id$v=19$m=65536,t=3,p=4$...",
-    "leader_name": "Arnesh Leader"
+    "leader_name": "Arnesh Leader",
+    "leader_enrollment": "N/A"
   }
 ]
 ```

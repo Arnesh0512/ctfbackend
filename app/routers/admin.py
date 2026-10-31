@@ -119,6 +119,7 @@ async def get_all_teams(
             username=team.username,
             password=team.password,
             leader_name=team.leader_details.get("name", "") if team.leader_details else "",
+            leader_enrollment=team.leader_details.get("enrollment", "") if team.leader_details else "",
         )
         for team in teams
     ]

@@ -36,6 +36,7 @@ class AdminTeamItemOut(BaseModel):
     username: str
     password: str
     leader_name: str
+    leader_enrollment: str
 
 
 # Team Edit by Admin
