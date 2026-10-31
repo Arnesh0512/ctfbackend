@@ -5,6 +5,8 @@ __pycache__/
 
 # Environment variables
 .env
+*.env
+supabase.env
 
 # Virtual environments
 .venv/
