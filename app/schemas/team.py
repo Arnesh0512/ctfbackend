@@ -39,6 +39,7 @@ class TeamOut(BaseModel):
     powerups_used: int
     playthrough: time
     has_reached_delhi: bool
+    reached_delhi_at: datetime | None = None
     current_path_id: uuid.UUID | None = None
     current_question_id: uuid.UUID | None = None
     frozen_until: datetime | None = None
@@ -91,6 +92,7 @@ class TeamMe(BaseModel):
     powerups_used: int
     playthrough: time
     has_reached_delhi: bool
+    reached_delhi_at: datetime | None = None
     current_path_id: uuid.UUID | None = None
     frozen_until: LocalDatetime | None = None
     leader_details: LeaderDetails | None = None

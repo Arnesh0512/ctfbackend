@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Index, PrimaryKeyConstraint, String
+from sqlalchemy import ForeignKey, Index, Numeric, PrimaryKeyConstraint, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,6 +25,7 @@ class TeamLog(Base):
     )
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(primary_key=True, default=utcnow)
+    points: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True, default=None)
 
 
 class TeamPathEvent(Base):
@@ -44,3 +46,4 @@ class TeamPathEvent(Base):
     )
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(primary_key=True, default=utcnow)
+    points: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True, default=None)

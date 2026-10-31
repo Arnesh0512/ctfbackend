@@ -33,6 +33,7 @@ class Team(Base):
     powerups_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     playthrough: Mapped[time] = mapped_column(Time, nullable=False, default=time(0, 0, 0))
     has_reached_delhi: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    reached_delhi_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
 
     current_path_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("paths.path_id", ondelete="SET NULL"), nullable=True, default=None
