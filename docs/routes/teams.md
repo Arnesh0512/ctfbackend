@@ -78,25 +78,6 @@ Fetches the profile details of the authenticated team. Authentication is handled
 
 ---
 
-## Team Route 3: Team Logout
-
-Clears the `team_token` `HttpOnly` authentication cookie from the browser.
-
-* **Method:** `POST`
-* **Path:** `/teams/logout`
-* **Status Code:** `200 OK`
-* **Tags:** `teams`
-
-### Response Body (`200 OK`)
-
-```json
-{
-  "message": "Logged out successfully"
-}
-```
-
----
-
 ### Error Responses
 
 | Status Code | Reason | Example Response |

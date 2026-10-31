@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.core.cookies import TEAM_COOKIE, clear_auth_cookie, set_auth_cookie
+from app.core.cookies import TEAM_COOKIE, set_auth_cookie
 from app.deps import DB
 from app.schemas.team import LeaderDetails, TeamLoginIn, TeamLoginOut, TeamProfileOut
 from app.verify import (
@@ -80,13 +80,3 @@ async def get_team_profile(
         team_members=team.team_members or [],
         leader_details=LeaderDetails(**team.leader_details),
     )
-
-
-# ==========================================
-# Team Route 3: Team Logout
-# ==========================================
-@router.post("/logout", summary="Team Logout")
-async def team_logout(response: Response) -> dict[str, str]:
-    """Clear the team HttpOnly authentication cookie."""
-    clear_auth_cookie(response, role="team")
-    return {"message": "Logged out successfully"}

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 
-from app.core.cookies import ADMIN_COOKIE, clear_auth_cookie, set_auth_cookie
+from app.core.cookies import ADMIN_COOKIE, set_auth_cookie
 from app.core.security import hash_password
 from app.deps import DB
 from app.models.team import Team
@@ -142,13 +142,3 @@ async def get_all_teams(
         )
         for team in teams
     ]
-
-
-# ==========================================
-# Admin Route 4: Admin Logout
-# ==========================================
-@router.post("/logout", summary="Admin Logout")
-async def admin_logout(response: Response) -> dict[str, str]:
-    """Clear admin authentication HttpOnly cookie."""
-    clear_auth_cookie(response, role="admin")
-    return {"message": "Admin logged out successfully"}
