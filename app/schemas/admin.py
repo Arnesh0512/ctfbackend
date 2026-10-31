@@ -21,13 +21,6 @@ class AdminLoginOut(BaseModel):
     role: str = "admin"
 
 
-# Admin Profile Response
-class AdminProfileOut(BaseModel):
-    admin_id: uuid.UUID
-    admin_name: str
-    role: str = "admin"
-
-
 # Admin Session
 class AdminSession(BaseModel):
     admin_id: uuid.UUID

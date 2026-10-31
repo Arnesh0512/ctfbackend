@@ -2,23 +2,18 @@ import uuid
 from datetime import time
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import APIRouter, status
 
 from app.core.security import hash_password
 from app.deps import DB
 from app.models.team import Team
-from app.schemas.admin import AdminLoginIn, AdminLoginOut, AdminProfileOut
+from app.schemas.admin import AdminLoginIn, AdminLoginOut
 from app.schemas.team import CreateTeamIn, TeamOut
 from app.verify import (
     create_access_token,
-    verify_access_token,
     verify_admin_credentials,
-    verify_admin_payload,
     verify_team_username,
 )
-
-security = HTTPBearer()
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -46,26 +41,7 @@ async def admin_login(body: AdminLoginIn, db: DB) -> AdminLoginOut:
 
 
 # ==========================================
-# Admin Route 2: Get Admin Profile
-# ==========================================
-@router.get("/profile", response_model=AdminProfileOut, summary="Get current admin profile")
-async def get_admin_profile(
-    db: DB,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> AdminProfileOut:
-    """Fetch current authenticated admin details from JWT token."""
-    payload = verify_access_token(credentials.credentials)
-    admin, admin_id, admin_name = await verify_admin_payload(payload, db)
-
-    return AdminProfileOut(
-        admin_id=admin.admin_id,
-        admin_name=admin.admin_name,
-        role="admin",
-    )
-
-
-# ==========================================
-# Admin Route 3: Create Team
+# Admin Route 2: Create Team
 # ==========================================
 @router.post(
     "/teams",

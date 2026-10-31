@@ -1,15 +1,6 @@
-# Admin Routes (`/admin` and `/admins`)
+# Admin Routes (`/admin`)
 
-Clean implementation of administrative endpoints following the decoupled architecture (`routes`, `schemas`, `verify`, `utils`).
-
----
-
-## Architecture Overview
-
-* **`app/routers/admin.py`**: Thin request controllers.
-* **`app/schemas/`**: Pydantic models for request validation and response serialization.
-* **`app/verify/`**: Pure verification layer (`verify_access_token`, `verify_admin_payload`, `verify_admin_credentials`, `verify_team_username`).
-* **`app/utils/`**: Shared utilities (`IST`, `pattern.py`, `time.py`).
+Administrative endpoints following the decoupled architecture (`routes`, `schemas`, `verify`, `utils`).
 
 ---
 
@@ -18,9 +9,9 @@ Clean implementation of administrative endpoints following the decoupled archite
 Authenticates an administrator with preexisting database credentials and returns a signed JWT access token.
 
 * **Method:** `POST`
-* **Path:** `/admin/login` *(alias: `/admins/login`)*
+* **Path:** `/admin/login`
 * **Status Code:** `200 OK`
-* **Tags:** `admin`, `admins`
+* **Tags:** `admin`
 
 ### Request Body (`application/json`)
 
@@ -62,36 +53,14 @@ The generated token is signed using the 64-byte `JWT_SECRET` in `.env` using HMA
 
 ---
 
-## Admin Route 2: Get Admin Profile
-
-Fetches the profile details of the authenticated administrator using the Bearer JWT token.
-
-* **Method:** `GET`
-* **Path:** `/admin/profile` *(alias: `/admins/profile`)*
-* **Headers:** `Authorization: Bearer <access_token>`
-* **Status Code:** `200 OK`
-* **Tags:** `admin`, `admins`
-
-### Response Body (`200 OK`)
-
-```json
-{
-  "admin_id": "c0000000-0000-0000-0000-000000000001",
-  "admin_name": "admin",
-  "role": "admin"
-}
-```
-
----
-
-## Admin Route 3: Create Team
+## Admin Route 2: Create Team
 
 Creates a new team login in the CTF event with user-supplied credentials and automatically populated initial game state.
 
 * **Method:** `POST`
-* **Path:** `/admin/teams` *(alias: `/admins/teams`, `/admin/create-team`)*
+* **Path:** `/admin/teams`
 * **Status Code:** `201 Created`
-* **Tags:** `admin`, `admins`
+* **Tags:** `admin`
 
 ### Request Body (`application/json`)
 
@@ -144,7 +113,9 @@ When creating the team, the system automatically assigns:
   "leader_details": {
     "name": "Arnesh Leader",
     "contact": "+91 9876543210",
-    "email": "leader@garuda.in"
+    "email": "leader@garuda.in",
+    "enrollment": "05116403221",
+    "college": "USICT"
   },
   "username": "garuda_2026",
   "points": "0.00",
@@ -165,7 +136,6 @@ When creating the team, the system automatically assigns:
 
 | Status Code | Reason | Example Response |
 | :--- | :--- | :--- |
-| `401 Unauthorized` | Invalid `admin_name` or `passcode`, or bad JWT | `{"detail": "Invalid admin credentials"}` |
-| `403 Forbidden` | Valid JWT but lacks admin role | `{"detail": "Forbidden: Admin privilege required"}` |
+| `401 Unauthorized` | Invalid `admin_name` or `passcode` | `{"detail": "Invalid admin credentials"}` |
 | `409 Conflict` | Username already in use | `{"detail": "Username 'garuda_2026' is already in use."}` |
 | `422 Unprocessable Entity` | Missing input fields | `{"detail": [{"loc": ["body", "passcode"], "msg": "Field required"}]}` |

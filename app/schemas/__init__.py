@@ -1,7 +1,6 @@
 from app.schemas.admin import (
     AdminLoginIn,
     AdminLoginOut,
-    AdminProfileOut,
     AdminSession,
     PointsAdjust,
     TeamUpdate,
@@ -18,7 +17,6 @@ from app.schemas.team import (
 __all__ = [
     "AdminLoginIn",
     "AdminLoginOut",
-    "AdminProfileOut",
     "AdminSession",
     "CreateTeamIn",
     "LeaderDetails",
