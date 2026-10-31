@@ -21,14 +21,12 @@ from app.verify import (
 security = HTTPBearer()
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-admins_router = APIRouter(prefix="/admins", tags=["admins"])
 
 
 # ==========================================
 # Admin Route 1: Admin Login
 # ==========================================
 @router.post("/login", response_model=AdminLoginOut, summary="Admin Login")
-@admins_router.post("/login", response_model=AdminLoginOut, summary="Admin Login (/admins alias)")
 async def admin_login(body: AdminLoginIn, db: DB) -> AdminLoginOut:
     """Authenticate admin with admin_name and passcode, returning a signed JWT token."""
     admin = await verify_admin_credentials(body.admin_name, body.passcode, db)
@@ -51,7 +49,6 @@ async def admin_login(body: AdminLoginIn, db: DB) -> AdminLoginOut:
 # Admin Route 2: Get Admin Profile
 # ==========================================
 @router.get("/profile", response_model=AdminProfileOut, summary="Get current admin profile")
-@admins_router.get("/profile", response_model=AdminProfileOut, summary="Get current admin profile (/admins alias)")
 async def get_admin_profile(
     db: DB,
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -76,27 +73,9 @@ async def get_admin_profile(
     status_code=status.HTTP_201_CREATED,
     summary="Create a new team",
 )
-@router.post(
-    "/create-team",
-    response_model=TeamOut,
-    status_code=status.HTTP_201_CREATED,
-    include_in_schema=False,
-)
-@admins_router.post(
-    "/teams",
-    response_model=TeamOut,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a new team (/admins alias)",
-)
-@admins_router.post(
-    "/create-team",
-    response_model=TeamOut,
-    status_code=status.HTTP_201_CREATED,
-    include_in_schema=False,
-)
 async def create_team(body: CreateTeamIn, db: DB) -> TeamOut:
     """Create a new team with autofilled default state fields."""
-    await verify_team_username(body.username, db, type="N")
+    await verify_team_username(body.username, db)
 
     new_team = Team(
         team_id=uuid.uuid4(),

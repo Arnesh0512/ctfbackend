@@ -39,7 +39,13 @@ async def verify_admin_payload(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    admin = await verify_admin_by_id(admin_id, db, type="Y")
+    admin = await db.scalar(select(Admin).where(Admin.admin_id == admin_id))
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Admin not found",
+        )
+
     return admin, admin.admin_id, admin.admin_name
 
 
@@ -62,62 +68,6 @@ async def verify_admin_credentials(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid admin credentials",
-        )
-
-    return admin
-
-
-async def verify_admin_by_id(
-    admin_id: uuid.UUID | str,
-    db: AsyncSession,
-    type: str = "Y",
-) -> Admin | None:
-    """Verify admin existence or absence by UUID."""
-    if isinstance(admin_id, str):
-        try:
-            admin_id = uuid.UUID(admin_id)
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid UUID format for admin_id",
-            )
-
-    admin = await db.scalar(select(Admin).where(Admin.admin_id == admin_id))
-
-    if type == "N" and admin:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Admin already exists",
-        )
-
-    if type == "Y" and not admin:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Admin not found",
-        )
-
-    return admin
-
-
-async def verify_admin_by_name(
-    admin_name: str,
-    db: AsyncSession,
-    type: str = "Y",
-) -> Admin | None:
-    """Verify admin existence or absence by username."""
-    admin_name = admin_name.strip()
-    admin = await db.scalar(select(Admin).where(Admin.admin_name == admin_name))
-
-    if type == "N" and admin:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Admin '{admin_name}' already exists",
-        )
-
-    if type == "Y" and not admin:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Admin not found",
         )
 
     return admin

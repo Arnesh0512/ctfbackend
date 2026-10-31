@@ -1,13 +1,8 @@
 from app.verify.admin import (
-    verify_admin_by_id,
-    verify_admin_by_name,
     verify_admin_credentials,
     verify_admin_payload,
 )
 from app.verify.team import (
-    verify_team_by_id,
-    verify_team_credentials,
-    verify_team_payload,
     verify_team_username,
 )
 from app.verify.token import (
@@ -18,12 +13,7 @@ from app.verify.token import (
 __all__ = [
     "create_access_token",
     "verify_access_token",
-    "verify_admin_by_id",
-    "verify_admin_by_name",
     "verify_admin_credentials",
     "verify_admin_payload",
-    "verify_team_by_id",
-    "verify_team_credentials",
-    "verify_team_payload",
     "verify_team_username",
 ]
