@@ -2,7 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import admin_router, events_router, teams_router
+import app.models.admin
+import app.models.content
+import app.models.game
+import app.models.logs
+import app.models.progress
+import app.models.team
+from app.routers.admin import router as admin_router
+from app.routers.events import router as events_router
+from app.routers.teams import router as teams_router
 
 
 def create_app() -> FastAPI:

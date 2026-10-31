@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cookies import ADMIN_COOKIE, TEAM_COOKIE
 from app.core.db import get_db
 from app.core.security import Role, decode_token
-from app.models import Admin, Team
+from app.models.admin import Admin
+from app.models.team import Team
 
 DB = Annotated[AsyncSession, Depends(get_db)]
 

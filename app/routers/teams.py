@@ -4,12 +4,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.core.cookies import TEAM_COOKIE, set_auth_cookie
 from app.deps import DB
 from app.schemas.team import LeaderDetails, TeamLoginIn, TeamLoginOut, TeamProfileOut
-from app.verify import (
-    create_access_token,
-    verify_access_token,
-    verify_team_credentials,
-    verify_team_payload,
-)
+from app.verify.team import verify_team_credentials, verify_team_payload
+from app.verify.token import create_access_token, verify_access_token
 
 security = HTTPBearer(auto_error=False)
 
