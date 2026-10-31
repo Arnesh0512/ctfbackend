@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, time
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.schemas.common import LocalDatetime
 
@@ -12,7 +12,7 @@ class LeaderDetails(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=256, description="Leader full name")
     contact: str = Field(..., min_length=1, max_length=64, description="Leader contact phone number")
-    email: str = Field(..., min_length=1, max_length=256, description="Leader email address")
+    email: EmailStr = Field(..., description="Leader email address validated via Pydantic")
     enrollment: str = Field(..., min_length=1, max_length=128, description="Leader enrollment number / student ID")
     college: str = Field(..., min_length=1, max_length=256, description="Leader college or institute name")
 
