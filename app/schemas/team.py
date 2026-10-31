@@ -54,10 +54,9 @@ class TeamLoginIn(BaseModel):
     password: str = Field(..., min_length=1, max_length=256, description="Team password")
 
 
-# Team Login Response with JWT
+# Team Login Response (JWT stored in HttpOnly cookie, not visible in body)
 class TeamLoginOut(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+    message: str = "Login successful"
     team_id: uuid.UUID
     role: str = "team"
 

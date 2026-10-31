@@ -12,19 +12,24 @@ _NAMES: dict[Role, str] = {"team": TEAM_COOKIE, "admin": ADMIN_COOKIE}
 
 
 def _options(role: Role) -> dict[str, Any]:
-    prefix = settings.api_prefix
     return {
-        # admin cookie  
-        "path": f"{prefix}/admin" if role == "admin" else f"{prefix}/",
+        "path": "/",
         "secure": settings.cookie_secure,
         "httponly": True,
-        "samesite": "strict",
+        "samesite": "lax",
     }
 
 
 def set_auth_cookie(response: Response, role: Role, token: str) -> None:
-    response.set_cookie(_NAMES[role], token, max_age=settings.token_ttl_seconds, **_options(role))
+    """Set JWT as an HttpOnly secure cookie so it cannot be viewed or accessed via JavaScript."""
+    response.set_cookie(
+        _NAMES[role],
+        token,
+        max_age=settings.token_ttl_seconds,
+        **_options(role),
+    )
 
 
 def clear_auth_cookie(response: Response, role: Role) -> None:
-    response.delete_cookie(_NAMES[role], **_options(role))
+    """Delete the authentication cookie."""
+    response.delete_cookie(_NAMES[role], path="/")

@@ -6,7 +6,7 @@ Endpoints for team authentication and game interaction following the decoupled a
 
 ## Team Route 1: Team Login
 
-Authenticates a team registered by an administrator with their `username` and `password`, returning a signed JWT access token.
+Authenticates a team registered by an administrator with their `username` and `password`. The JWT token is set directly in a secure **`HttpOnly` cookie** (`team_token`) so that client-side JavaScript and the user cannot view or extract it, protecting against XSS attacks.
 
 * **Method:** `POST`
 * **Path:** `/teams/login`
@@ -31,27 +31,19 @@ Authenticates a team registered by an administrator with their `username` and `p
 
 ---
 
-### Response Body (`200 OK`)
-
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer",
-  "team_id": "a37e11d5-eafa-464d-91e4-95dc941ad371",
-  "role": "team"
-}
+### Response Headers
+```http
+Set-Cookie: team_token=eyJhbGciOiJIUzI1NiIsInR5c...; Max-Age=14400; Path=/; HttpOnly; SameSite=lax
 ```
 
-### JWT Token Claims
-The generated token is signed using the 64-byte `JWT_SECRET` in `.env` with HMAC-SHA256 (`HS256`):
+### Response Body (`200 OK`)
+
+The JWT is **not** exposed in the response body to prevent user / script inspection:
 ```json
 {
+  "message": "Login successful",
   "team_id": "a37e11d5-eafa-464d-91e4-95dc941ad371",
-  "role": "team",
-  "username": "garuda_2026",
-  "team_name": "Garuda CTF",
-  "iat": 1793455488,
-  "exp": 1793469888
+  "role": "team"
 }
 ```
 
@@ -59,11 +51,11 @@ The generated token is signed using the 64-byte `JWT_SECRET` in `.env` with HMAC
 
 ## Team Route 2: Get Team Profile
 
-Fetches the profile details of the authenticated team using their JWT access token.
+Fetches the profile details of the authenticated team. Authentication is handled automatically via the secure `team_token` **`HttpOnly` cookie** sent by the browser (or via `Authorization: Bearer <token>` fallback in Swagger UI / API tools).
 
 * **Method:** `GET`
 * **Path:** `/teams/profile`
-* **Authentication:** **JWT Bearer Required** (`Authorization: Bearer <team_token>`)
+* **Authentication:** **`team_token` HttpOnly Cookie** or **JWT Bearer**
 * **Status Code:** `200 OK`
 * **Tags:** `teams`
 
@@ -86,11 +78,30 @@ Fetches the profile details of the authenticated team using their JWT access tok
 
 ---
 
+## Team Route 3: Team Logout
+
+Clears the `team_token` `HttpOnly` authentication cookie from the browser.
+
+* **Method:** `POST`
+* **Path:** `/teams/logout`
+* **Status Code:** `200 OK`
+* **Tags:** `teams`
+
+### Response Body (`200 OK`)
+
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+---
+
 ### Error Responses
 
 | Status Code | Reason | Example Response |
 | :--- | :--- | :--- |
-| `401 Unauthorized` | Invalid username/password on login, or missing/expired JWT | `{"detail": "Not authenticated"}` |
+| `401 Unauthorized` | Invalid username/password on login, or missing/expired cookie | `{"detail": "Not authenticated"}` |
 | `403 Forbidden` | Valid JWT provided, but role is not `team` (e.g. admin token used) | `{"detail": "Forbidden: Team privilege required"}` |
 | `404 Not Found` | Team associated with token no longer exists in database | `{"detail": "Team not found"}` |
 | `422 Unprocessable Entity` | Missing input fields | `{"detail": [{"loc": ["body", "password"], "msg": "Field required"}]}` |
