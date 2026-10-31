@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     env: Literal["dev", "prod"] = "dev"
     api_prefix: str = ""
     database_url: str = "postgresql+asyncpg://ctf:ctf@localhost:5432/ctf"
+    direct_url: str | None = None
 
     jwt_secret: str = Field(min_length=32)
     jwt_algorithm: str = "HS256"

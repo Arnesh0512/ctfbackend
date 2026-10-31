@@ -37,4 +37,7 @@ def set_auth_cookie(response: Response, role: Role, token: str) -> None:
 
 def clear_auth_cookie(response: Response, role: Role) -> None:
     """Delete the authentication cookie using matching path and flags."""
-    response.delete_cookie(_NAMES[role], **_options(role))
+    response.delete_cookie(
+        _NAMES[role],
+        **_options(role)
+    )
