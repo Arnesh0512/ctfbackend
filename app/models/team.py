@@ -15,7 +15,7 @@ class Team(Base):
     __table_args__ = (
         CheckConstraint("points >= 0", name="ck_teams_points_non_negative"),
         CheckConstraint(
-            "leader_details ? 'name' AND leader_details ? 'contact' AND leader_details ? 'email'",
+            "leader_details ? 'name' AND leader_details ? 'contact' AND leader_details ? 'email' AND leader_details ? 'enrollment' AND leader_details ? 'college'",
             name="ck_teams_leader_details_fields",
         ),
     )

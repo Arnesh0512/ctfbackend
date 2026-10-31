@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS "teams" (
     CONSTRAINT check_leader_details_fields CHECK (
         leader_details ? 'name' AND
         leader_details ? 'contact' AND
-        leader_details ? 'email'
+        leader_details ? 'email' AND
+        leader_details ? 'enrollment' AND
+        leader_details ? 'college'
     )
 );
 ```
@@ -40,7 +42,7 @@ CREATE TABLE IF NOT EXISTS "teams" (
 | `team_id` | `UUID` | No | `uuid.uuid4()` | Unique primary key for the team |
 | `team_name` | `VARCHAR(256)` | No | - | Display name of the team |
 | `team_members`| `TEXT[]` | Yes | `[]` | List of team member names (excluding leader) |
-| `leader_details` | `JSONB` | No | - | Leader info: `name`, `contact`, `email` |
+| `leader_details` | `JSONB` | No | - | Leader info: `name`, `contact`, `email`, `enrollment`, `college` |
 | `username` | `VARCHAR(256)` | No | - | Unique login identifier |
 | `password` | `VARCHAR(256)` | No | - | Argon2-hashed password |
 | `points` | `NUMERIC(10,2)` | No | `0.00` | Team score (cannot be negative) |
@@ -60,9 +62,11 @@ CREATE TABLE IF NOT EXISTS "teams" (
 ### `LeaderDetails`
 ```python
 class LeaderDetails(BaseModel):
-    name: str = Field(..., min_length=1, max_length=256)
-    contact: str = Field(..., min_length=1, max_length=64)
-    email: str = Field(..., min_length=1, max_length=256)
+    name: str = Field(..., min_length=1, max_length=256, description="Leader full name")
+    contact: str = Field(..., min_length=1, max_length=64, description="Leader contact phone number")
+    email: str = Field(..., min_length=1, max_length=256, description="Leader email address")
+    enrollment: str = Field(..., min_length=1, max_length=128, description="Leader enrollment number / student ID")
+    college: str = Field(..., min_length=1, max_length=256, description="Leader college or institute name")
 ```
 
 ### `CreateTeamIn` (Request)

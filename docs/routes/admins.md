@@ -99,7 +99,7 @@ Creates a new team login in the CTF event with user-supplied credentials and aut
 | :--- | :--- | :---: | :--- |
 | `team_name` | `string` | **Yes** | Display name of the team (1–256 chars) |
 | `team_members` | `string[]` | No | List of member names (defaults to `[]`) |
-| `leader_details` | `object` | **Yes** | Leader contact object containing `name`, `contact`, and `email` |
+| `leader_details` | `object` | **Yes** | Leader contact object containing `name`, `contact`, `email`, `enrollment`, and `college` |
 | `username` | `string` | **Yes** | Unique login username (1–256 chars) |
 | `password` | `string` | **Yes** | Plaintext password (hashed with Argon2 before storage) |
 
@@ -111,7 +111,9 @@ Creates a new team login in the CTF event with user-supplied credentials and aut
   "leader_details": {
     "name": "Arnesh Leader",
     "contact": "+91 9876543210",
-    "email": "leader@garuda.in"
+    "email": "leader@garuda.in",
+    "enrollment": "05116403221",
+    "college": "USICT"
   },
   "username": "garuda_2026",
   "password": "StrongSecretPassword123!"
