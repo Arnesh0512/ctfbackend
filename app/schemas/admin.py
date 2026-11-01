@@ -40,13 +40,17 @@ class AdminTeamItemOut(BaseModel):
 
 
 # Team Edit by Admin
-class TeamUpdate(BaseModel):
+class AdminTeamUpdateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: str | None = Field(default=None, min_length=1, max_length=256)
-    password: str | None = Field(default=None, min_length=6, max_length=256)
+    team_name: str | None = Field(default=None, min_length=1, max_length=256)
+    username: str | None = Field(default=None, min_length=1, max_length=256)
+    password: str | None = Field(default=None, min_length=1, max_length=256)
     leader_details: LeaderDetails | None = None
     team_members: list[str] | None = None
+
+
+TeamUpdate = AdminTeamUpdateIn
 
 
 # Manual Points Adjustment

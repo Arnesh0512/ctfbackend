@@ -6,11 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 
+from app.core.clock import utcnow
 from app.core.cookies import ADMIN_COOKIE, set_auth_cookie
 from app.core.security import hash_password
 from app.deps import DB
+from app.models.game import GameState
 from app.models.team import Team
-from app.schemas.admin import AdminLoginIn, AdminLoginOut, AdminTeamItemOut
+from app.schemas.admin import AdminLoginIn, AdminLoginOut, AdminTeamItemOut, AdminTeamUpdateIn
 from app.schemas.team import CreateTeamIn, TeamOut
 from app.verify.admin import verify_admin_credentials, verify_admin_payload
 from app.verify.team import verify_team_username
@@ -63,6 +65,16 @@ async def admin_login(body: AdminLoginIn, response: Response, db: DB) -> AdminLo
     )
 
 
+async def _assert_before_game_start(db: DB, action: str = "modify") -> None:
+    """Ensure team modifications or creations cannot occur after game start."""
+    game = await db.scalar(select(GameState))
+    if game and utcnow() >= game.start_at:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Cannot {action} teams after the game has started.",
+        )
+
+
 # ==========================================
 # Admin Route 2: Create Team (Requires Admin JWT)
 # ==========================================
@@ -77,10 +89,11 @@ async def create_team(
     db: DB,
     token: str = Depends(get_admin_token),
 ) -> TeamOut:
-    """Create a new team with autofilled default state fields."""
+    """Create a new team before the game starts (Requires Admin JWT)."""
     payload = verify_access_token(token)
     await verify_admin_payload(payload, db)
 
+    await _assert_before_game_start(db, action="create")
     await verify_team_username(body.username, db)
 
     new_team = Team(
@@ -138,3 +151,79 @@ async def get_all_teams(
         )
         for team in teams
     ]
+
+
+# ==========================================
+# Admin Route 4: Get Team by ID (Requires Admin JWT)
+# ==========================================
+@router.get(
+    "/teams/{team_id}",
+    response_model=TeamOut,
+    summary="Get team by ID",
+)
+async def get_team_by_id(
+    team_id: uuid.UUID,
+    db: DB,
+    token: str = Depends(get_admin_token),
+) -> TeamOut:
+    """Fetch details of a single team by team_id (Requires Admin JWT)."""
+    payload = verify_access_token(token)
+    await verify_admin_payload(payload, db)
+
+    team = await db.get(Team, team_id)
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Team with ID '{team_id}' not found.",
+        )
+
+    return TeamOut.model_validate(team)
+
+
+# ==========================================
+# Admin Route 5: Update Team by ID (Requires Admin JWT)
+# ==========================================
+@router.patch(
+    "/teams/{team_id}",
+    response_model=TeamOut,
+    summary="Update team by ID",
+)
+async def update_team_by_id(
+    team_id: uuid.UUID,
+    body: AdminTeamUpdateIn,
+    db: DB,
+    token: str = Depends(get_admin_token),
+) -> TeamOut:
+    """Update team details before the game starts (Requires Admin JWT)."""
+    payload = verify_access_token(token)
+    await verify_admin_payload(payload, db)
+
+    await _assert_before_game_start(db, action="modify")
+
+    team = await db.get(Team, team_id)
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Team with ID '{team_id}' not found.",
+        )
+
+    if body.username is not None and body.username.strip() != team.username:
+        await verify_team_username(body.username, db)
+        team.username = body.username.strip()
+
+    if body.team_name is not None:
+        team.team_name = body.team_name.strip()
+
+    if body.password is not None:
+        team.password = hash_password(body.password)
+
+    if body.team_members is not None:
+        team.team_members = body.team_members
+
+    if body.leader_details is not None:
+        team.leader_details = body.leader_details.model_dump()
+
+    await db.commit()
+    await db.refresh(team)
+
+    return TeamOut.model_validate(team)
