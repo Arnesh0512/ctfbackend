@@ -18,7 +18,3 @@ class FileUploadOut(BaseModel):
     url: str = Field(..., description="Supabase S3 public link")
     filename: str = Field(..., description="Uploaded filename")
     question_id: uuid.UUID = Field(..., description="Linked question ID in database")
-    file_path: list[str] = Field(
-        ...,
-        description="Updated file links on the question record in database",
-    )

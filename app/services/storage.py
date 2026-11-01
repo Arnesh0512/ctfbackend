@@ -50,8 +50,8 @@ async def upload_file_to_supabase(
     raw_monument_path = f"{state.strip()}-{monument.strip()}"
     monument_folder = re.sub(r"[\s_]+", "-", raw_monument_path).strip("-")
 
-    # Compute SHA-256 of file content
-    file_sha = hashlib.sha256(content).hexdigest()
+    # Compute first 16 characters of SHA-256 of file content
+    file_sha = hashlib.sha256(content).hexdigest()[:16]
 
     bucket = settings.supabase_storage_bucket
     object_path = f"{monument_folder}/{file_sha}/{clean_name}"

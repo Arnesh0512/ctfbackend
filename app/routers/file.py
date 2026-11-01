@@ -64,5 +64,4 @@ async def upload_file(
         url=public_url,
         filename=file.filename or "file",
         question_id=question.question_id,
-        file_path=question.file_path,
     )
