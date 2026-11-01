@@ -8,6 +8,7 @@ import app.models.content
 import app.models.game
 import app.models.logs
 import app.models.progress
+import app.models.question
 import app.models.team
 from app.routers.admin import router as admin_router
 from app.routers.events import router as events_router

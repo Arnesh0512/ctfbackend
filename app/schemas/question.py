@@ -3,6 +3,15 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class QuestionUploadIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    question_id: uuid.UUID | None = Field(
+        default=None,
+        description="Optional question ID to link the uploaded file in database",
+    )
+
+
 class FileUploadOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
