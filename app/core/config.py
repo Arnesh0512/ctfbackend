@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=(".env", "supabase.env"), extra="ignore")
 
     env: Literal["dev", "prod"] = "dev"
     api_prefix: str = ""
@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     timezone: str = "Asia/Kolkata"
     game_duration_minutes: int = 120
     files_dir: Path = Path("files")
+
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_storage_bucket: str = "questions"
 
     @field_validator("api_prefix")
     @classmethod
