@@ -3,12 +3,12 @@ import uuid
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
 from app.deps import DB
-from app.models.question import Question
+from app.models.content import Question
 from app.routers.time import verify_admin
-from app.schemas.question import FileUploadOut, QuestionUploadIn
+from app.schemas.file import FileUploadIn, FileUploadOut
 from app.services.storage import upload_file_to_supabase
 
-router = APIRouter(prefix="/question", tags=["question"], dependencies=[Depends(verify_admin)])
+router = APIRouter(prefix="/file", tags=["file"], dependencies=[Depends(verify_admin)])
 
 
 @router.post(
@@ -17,10 +17,10 @@ router = APIRouter(prefix="/question", tags=["question"], dependencies=[Depends(
     status_code=status.HTTP_201_CREATED,
     summary="Upload file to Supabase S3 and link to question in DB",
 )
-async def upload_question_file(
+async def upload_file(
     db: DB,
     file: UploadFile = File(...),
-    body: QuestionUploadIn = Form(),
+    body: FileUploadIn = Form(),
 ) -> FileUploadOut:
     """Upload a file (e.g. image, zip) to Supabase S3 Storage.
 
@@ -65,7 +65,6 @@ async def upload_question_file(
 
     return FileUploadOut(
         url=public_url,
-        file_url=public_url,
         filename=file.filename or "file",
         question_id=target_qid,
         file_path=stored_files,
