@@ -6,7 +6,7 @@ from app.deps import DB
 from app.models.game import GameState
 from app.schemas.game import GameStateOut
 
-router = APIRouter(prefix="/game", tags=["game"])
+router = APIRouter(prefix="/admin/game", tags=["admin: /game"])
 
 
 @router.get("/state", response_model=GameStateOut, summary="Get Game State")

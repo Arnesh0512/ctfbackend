@@ -20,7 +20,7 @@ from app.verify.token import create_access_token, verify_access_token
 
 security = HTTPBearer(auto_error=False)
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin: /"])
 
 
 def get_admin_token(

@@ -21,7 +21,7 @@ from app.schemas.question import (
 )
 from app.services.storage import delete_files_from_supabase, extract_s3_object_path
 
-router = APIRouter(prefix="/question", tags=["question"], dependencies=[Depends(verify_admin)])
+router = APIRouter(prefix="/admin/question", tags=["admin: /question"], dependencies=[Depends(verify_admin)])
 
 
 async def _assert_before_game_start(db: DB, action: str = "modify") -> None:

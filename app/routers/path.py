@@ -19,7 +19,7 @@ from app.schemas.path import (
     PathUpdateIn,
 )
 
-router = APIRouter(prefix="/path", tags=["path"], dependencies=[Depends(verify_admin)])
+router = APIRouter(prefix="/admin/path", tags=["admin: /path"], dependencies=[Depends(verify_admin)])
 
 
 async def _assert_before_game_start(db: DB, action: str = "create") -> None:

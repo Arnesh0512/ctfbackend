@@ -19,7 +19,7 @@ from app.services.storage import (
     upload_file_to_supabase,
 )
 
-router = APIRouter(prefix="/file", tags=["file"], dependencies=[Depends(verify_admin)])
+router = APIRouter(prefix="/admin/file", tags=["admin: /file"], dependencies=[Depends(verify_admin)])
 
 
 @router.post(

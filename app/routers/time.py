@@ -16,7 +16,7 @@ async def verify_admin(db: DB, token: str = Depends(get_admin_token)) -> None:
     await verify_admin_payload(payload, db)
 
 
-router = APIRouter(prefix="/time", tags=["time"], dependencies=[Depends(verify_admin)])
+router = APIRouter(prefix="/admin/time", tags=["admin: /time"], dependencies=[Depends(verify_admin)])
 
 
 def _timeout(game: GameState, message: str) -> TimeOut:

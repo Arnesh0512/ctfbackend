@@ -6,7 +6,7 @@ from app.models.game import StorePrice
 from app.routers.time import verify_admin
 from app.schemas.store import StorePriceIn, StorePriceOut
 
-router = APIRouter(prefix="/store", tags=["store"], dependencies=[Depends(verify_admin)])
+router = APIRouter(prefix="/admin/store", tags=["admin: /store"], dependencies=[Depends(verify_admin)])
 
 
 @router.get("", response_model=list[StorePriceOut], summary="Get all store items")
