@@ -26,5 +26,4 @@ async def get_state(db: DB) -> GameStateOut:
         message=message,
         start_at=game.start_at if game else None,
         end_at=game.end_at if game else None,
-        last=game.last if game else None,
     )
