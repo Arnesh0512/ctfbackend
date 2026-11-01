@@ -13,6 +13,7 @@ from app.routers.admin import router as admin_router
 from app.routers.events import router as events_router
 from app.routers.file import router as file_router
 from app.routers.game import router as game_router
+from app.routers.path import router as path_router
 from app.routers.question import router as question_router
 from app.routers.store import router as store_router
 from app.routers.teams import router as teams_router
@@ -47,7 +48,7 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok", "service": "mayasabha-ctf-backend"}
 
-    # Include Admin, Teams, Events, Game, Time, Store, File, and Question routers
+    # Include Admin, Teams, Events, Game, Time, Store, File, Question, and Path routers
     app.include_router(admin_router, prefix=prefix)
     app.include_router(teams_router, prefix=prefix)
     app.include_router(events_router, prefix=prefix)
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(store_router, prefix=prefix)
     app.include_router(file_router, prefix=prefix)
     app.include_router(question_router, prefix=prefix)
+    app.include_router(path_router, prefix=prefix)
 
     return app
 

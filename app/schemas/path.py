@@ -1,0 +1,53 @@
+import uuid
+
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+
+
+class PathCreateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    path_name: str = Field(..., min_length=1, description="Unique name of the path")
+    question_ids: list[uuid.UUID] = Field(
+        ...,
+        validation_alias=AliasChoices("question_ids", "questions"),
+        serialization_alias="question_ids",
+        min_length=1,
+        description="List of question UUIDs for this path",
+    )
+
+    @field_validator("path_name")
+    @classmethod
+    def _validate_path_name(cls, v: str) -> str:
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("path_name cannot be empty or only whitespace")
+        return stripped
+
+    @field_validator("question_ids")
+    @classmethod
+    def _validate_question_ids(cls, v: list[uuid.UUID]) -> list[uuid.UUID]:
+        if not v:
+            raise ValueError("question_ids cannot be empty")
+        seen = set()
+        duplicates = []
+        for qid in v:
+            if qid in seen:
+                duplicates.append(str(qid))
+            seen.add(qid)
+        if duplicates:
+            raise ValueError(f"Duplicate question_ids provided in request: {duplicates}")
+        return v
+
+
+class PathCreateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    path_id: uuid.UUID = Field(..., description="Generated path ID")
+
+
+class PathDetailOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    path_id: uuid.UUID = Field(..., description="Path ID")
+    path_name: str = Field(..., description="Path name")
+    questions: list[uuid.UUID] = Field(..., description="List of question UUIDs")
