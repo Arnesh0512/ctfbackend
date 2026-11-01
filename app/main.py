@@ -11,6 +11,7 @@ import app.models.progress
 import app.models.team
 from app.routers.admin import router as admin_router
 from app.routers.events import router as events_router
+from app.routers.game import router as game_router
 from app.routers.teams import router as teams_router
 
 
@@ -42,10 +43,11 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok", "service": "mayasabha-ctf-backend"}
 
-    # Include Admin, Teams, and Events routers
+    # Include Admin, Teams, Events, and Game routers
     app.include_router(admin_router, prefix=prefix)
     app.include_router(teams_router, prefix=prefix)
     app.include_router(events_router, prefix=prefix)
+    app.include_router(game_router, prefix=prefix)
 
     return app
 
