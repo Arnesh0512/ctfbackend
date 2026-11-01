@@ -34,12 +34,6 @@ async def _assert_before_game_start(db: DB, action: str = "create") -> None:
     status_code=status.HTTP_201_CREATED,
     summary="Create a new path (Admin only)",
 )
-@router.post(
-    "s",
-    response_model=PathCreateOut,
-    status_code=status.HTTP_201_CREATED,
-    include_in_schema=False,
-)
 async def create_path(
     body: PathCreateIn,
     db: DB,
