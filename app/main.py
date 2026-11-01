@@ -24,104 +24,102 @@ from app.routers.time import router as time_router
 SWAGGER_NESTED_ACCORDION_JS = """
 <script>
 (function() {
-  function setupAdminNestedGroups() {
-    const sections = Array.from(document.querySelectorAll('.opblock-tag-section'));
-    if (!sections.length) return false;
-    if (document.getElementById('admin-master-group')) return true;
+  let isCollapsed = false;
 
-    // Filter all sections whose tag starts with "admin:"
-    const adminSections = sections.filter(sec => {
-      const btn = sec.querySelector('h4.opblock-tag');
-      const text = btn ? btn.innerText.trim() : '';
-      return text.startsWith('admin:');
+  function updateAdminSections() {
+    const headers = Array.from(document.querySelectorAll('.opblock-tag'));
+    if (!headers.length) return false;
+
+    // Filter all headers belonging to admin (data-tag or textContent starting with 'admin:')
+    const adminHeaders = headers.filter(h => {
+      const tag = (h.getAttribute('data-tag') || h.textContent || '').trim();
+      return tag.startsWith('admin:');
     });
 
-    if (!adminSections.length) return false;
+    if (!adminHeaders.length) return false;
 
-    // Create the outer admin master accordion container
-    const master = document.createElement('div');
-    master.id = 'admin-master-group';
-    master.className = 'opblock-tag-section is-open';
-    master.style.border = '1px solid #cbd5e1';
-    master.style.borderRadius = '8px';
-    master.style.marginBottom = '20px';
-    master.style.backgroundColor = '#f8fafc';
-    master.style.overflow = 'hidden';
+    // Map each header to its enclosing tag section
+    const adminSections = adminHeaders.map(h => {
+      return h.closest('.opblock-tag-section') || h.closest('span') || h.parentElement;
+    }).filter(Boolean);
 
-    // Header
-    const header = document.createElement('h4');
-    header.className = 'opblock-tag';
-    header.style.cursor = 'pointer';
-    header.style.margin = '0';
-    header.style.padding = '14px 20px';
-    header.style.backgroundColor = '#f1f5f9';
-    header.style.borderBottom = '1px solid #cbd5e1';
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
+    // Locate or create the master admin header
+    let master = document.getElementById('swagger-admin-master-header');
+    if (!master && adminSections.length > 0) {
+      master = document.createElement('div');
+      master.id = 'swagger-admin-master-header';
+      master.style.margin = '28px 0 12px 0';
+      master.style.padding = '14px 20px';
+      master.style.background = '#f1f5f9';
+      master.style.border = '1px solid #cbd5e1';
+      master.style.borderRadius = '8px';
+      master.style.cursor = 'pointer';
+      master.style.display = 'flex';
+      master.style.justifyContent = 'space-between';
+      master.style.alignItems = 'center';
+      master.style.userSelect = 'none';
 
-    header.innerHTML = `
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:18px; font-weight:700; color:#0f172a; text-transform:none;">admin</span>
-      </div>
-      <button type="button" class="expand-operation" style="background:none; border:none; cursor:pointer;" title="Expand/Collapse admin">
-        <svg width="20" height="20" viewBox="0 0 20 20" style="transition:transform 0.2s ease;">
-          <path d="M5 7.5L10 12.5L15 7.5" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
-      </button>
-    `;
+      master.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:22px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">admin</span>
+          <span style="font-size:12px; color:#64748b; background:#e2e8f0; padding:3px 10px; border-radius:12px; font-weight:600;">global minimizer</span>
+        </div>
+        <div id="swagger-admin-master-arrow" style="font-size:18px; color:#475569; transition:transform 0.25s ease;">&#9660;</div>
+      `;
 
-    // Body containing sub-minimizers
-    const body = document.createElement('div');
-    body.id = 'admin-master-body';
-    body.style.padding = '10px 16px';
-    body.style.display = 'block';
+      master.addEventListener('click', () => {
+        isCollapsed = !isCollapsed;
+        const arrow = document.getElementById('swagger-admin-master-arrow');
+        if (arrow) arrow.style.transform = isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+        master.style.background = isCollapsed ? '#e2e8f0' : '#f1f5f9';
 
-    const firstAdmin = adminSections[0];
-    firstAdmin.parentNode.insertBefore(master, firstAdmin);
-    master.appendChild(header);
-    master.appendChild(body);
+        adminSections.forEach(sec => {
+          sec.style.display = isCollapsed ? 'none' : '';
+        });
+      });
 
-    let isOpen = true;
-    const arrow = header.querySelector('svg');
-    header.addEventListener('click', () => {
-      isOpen = !isOpen;
-      body.style.display = isOpen ? 'block' : 'none';
-      header.style.borderBottom = isOpen ? '1px solid #cbd5e1' : 'none';
-      arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
-    });
+      // Insert master header right before the first admin section
+      const firstSec = adminSections[0];
+      firstSec.parentNode.insertBefore(master, firstSec);
+    }
 
-    // Move each admin section into body and rename the visible label
-    adminSections.forEach(sec => {
-      const label = sec.querySelector('h4.opblock-tag a span, h4.opblock-tag span');
-      if (label) {
-        const full = label.innerText.trim();
-        if (full.startsWith('admin:')) {
-          label.innerText = full.replace(/^admin:\s*/, '').trim();
+    // Apply visual indentation and strip "admin: " from sub-labels
+    adminHeaders.forEach(h => {
+      const label = h.querySelector('a span') || h.querySelector('span') || h;
+      if (label && label.childNodes) {
+        for (let node of label.childNodes) {
+          if (node.nodeType === Node.TEXT_NODE && node.nodeValue.includes('admin:')) {
+            node.nodeValue = node.nodeValue.replace(/^admin:\s*/, '').trim();
+          }
         }
       }
-      sec.style.margin = '8px 0';
-      sec.style.backgroundColor = '#ffffff';
-      sec.style.border = '1px solid #e2e8f0';
-      sec.style.borderRadius = '6px';
-      body.appendChild(sec);
+
+      const sec = h.closest('.opblock-tag-section') || h.closest('span') || h.parentElement;
+      if (sec) {
+        sec.style.marginLeft = '20px';
+        sec.style.borderLeft = '3px solid #94a3b8';
+        sec.style.paddingLeft = '14px';
+        if (isCollapsed) {
+          sec.style.display = 'none';
+        }
+      }
     });
 
     return true;
   }
 
-  // Poll until Swagger UI finishes rendering initial DOM
+  // Poll until Swagger UI DOM is available
   const timer = setInterval(() => {
-    if (setupAdminNestedGroups()) {
-      clearInterval(timer);
+    if (updateAdminSections()) {
+      // Periodic check
     }
-  }, 100);
+  }, 150);
 
-  // Watch for DOM changes (search, filter, re-renders)
+  setTimeout(() => clearInterval(timer), 8000);
+
+  // Observe DOM for subsequent renders / route expansions
   const observer = new MutationObserver(() => {
-    if (!document.getElementById('admin-master-group')) {
-      setupAdminNestedGroups();
-    }
+    updateAdminSections();
   });
   observer.observe(document.body, { childList: true, subtree: true });
 })();
@@ -170,10 +168,12 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok", "service": "mayasabha-ctf-backend"}
 
-    # Include Admin, Teams, Events, Game, Time, Store, File, Question, and Path routers
-    app.include_router(admin_router, prefix=prefix)
+    # Include Participant / Public routers FIRST
     app.include_router(teams_router, prefix=prefix)
     app.include_router(events_router, prefix=prefix)
+
+    # Include Admin routers CONTIGUOUSLY
+    app.include_router(admin_router, prefix=prefix)
     app.include_router(game_router, prefix=prefix)
     app.include_router(time_router, prefix=prefix)
     app.include_router(store_router, prefix=prefix)
