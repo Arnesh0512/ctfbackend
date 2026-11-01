@@ -24,6 +24,9 @@ class TeamLog(Base):
     question_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("questions.question_id", ondelete="SET NULL"), nullable=True
     )
+    path_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("paths.path_id", ondelete="SET NULL"), nullable=True, default=None
+    )
     event_type: Mapped[QuestionEvent] = mapped_column(str_enum(QuestionEvent), nullable=False)
     created_at: Mapped[datetime] = mapped_column(primary_key=True, default=utcnow)
     points: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True, default=None)
