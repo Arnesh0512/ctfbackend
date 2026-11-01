@@ -9,7 +9,7 @@ from app.verify.token import create_access_token, verify_access_token
 
 security = HTTPBearer(auto_error=False)
 
-router = APIRouter(prefix="/teams", tags=["teams"])
+router = APIRouter(tags=["teams: /"])
 
 
 def get_team_token(

@@ -18,30 +18,34 @@ from app.routers.team import router as team_router
 SWAGGER_NESTED_ACCORDION_JS = """
 <script>
 (function() {
-  let isCollapsed = false;
+  const groupStates = {};
 
-  function updateAdminSections() {
+  function setupGroupMinimizer(groupPrefix, groupName) {
     const headers = Array.from(document.querySelectorAll('.opblock-tag'));
     if (!headers.length) return false;
 
-    // Filter all headers belonging to admin (data-tag or textContent starting with 'admin:')
-    const adminHeaders = headers.filter(h => {
+    // Filter headers belonging to this group (data-tag or textContent starting with groupPrefix)
+    const matchingHeaders = headers.filter(h => {
       const tag = (h.getAttribute('data-tag') || h.textContent || '').trim();
-      return tag.startsWith('admin:');
+      return tag.startsWith(groupPrefix);
     });
 
-    if (!adminHeaders.length) return false;
+    if (!matchingHeaders.length) return false;
 
     // Map each header to its enclosing tag section
-    const adminSections = adminHeaders.map(h => {
+    const matchingSections = matchingHeaders.map(h => {
       return h.closest('.opblock-tag-section') || h.closest('span') || h.parentElement;
     }).filter(Boolean);
 
-    // Locate or create the master admin header
-    let master = document.getElementById('swagger-admin-master-header');
-    if (!master && adminSections.length > 0) {
+    const masterId = 'swagger-' + groupName + '-master-header';
+    let master = document.getElementById(masterId);
+    if (!master && matchingSections.length > 0) {
+      if (!(groupName in groupStates)) {
+        groupStates[groupName] = false; // false = expanded (not collapsed)
+      }
+
       master = document.createElement('div');
-      master.id = 'swagger-admin-master-header';
+      master.id = masterId;
       master.style.margin = '28px 0 12px 0';
       master.style.padding = '14px 20px';
       master.style.background = '#f1f5f9';
@@ -55,35 +59,36 @@ SWAGGER_NESTED_ACCORDION_JS = """
 
       master.innerHTML = `
         <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:22px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">admin</span>
+          <span style="font-size:22px; font-weight:800; color:#0f172a; letter-spacing:-0.5px;">${groupName}</span>
           <span style="font-size:12px; color:#64748b; background:#e2e8f0; padding:3px 10px; border-radius:12px; font-weight:600;">global minimizer</span>
         </div>
-        <div id="swagger-admin-master-arrow" style="font-size:18px; color:#475569; transition:transform 0.25s ease;">&#9660;</div>
+        <div id="swagger-${groupName}-master-arrow" style="font-size:18px; color:#475569; transition:transform 0.25s ease;">&#9660;</div>
       `;
 
       master.addEventListener('click', () => {
-        isCollapsed = !isCollapsed;
-        const arrow = document.getElementById('swagger-admin-master-arrow');
+        groupStates[groupName] = !groupStates[groupName];
+        const isCollapsed = groupStates[groupName];
+        const arrow = document.getElementById(`swagger-${groupName}-master-arrow`);
         if (arrow) arrow.style.transform = isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
         master.style.background = isCollapsed ? '#e2e8f0' : '#f1f5f9';
 
-        adminSections.forEach(sec => {
+        matchingSections.forEach(sec => {
           sec.style.display = isCollapsed ? 'none' : '';
         });
       });
 
-      // Insert master header right before the first admin section
-      const firstSec = adminSections[0];
+      const firstSec = matchingSections[0];
       firstSec.parentNode.insertBefore(master, firstSec);
     }
 
-    // Apply visual indentation and strip "admin: " from sub-labels
-    adminHeaders.forEach(h => {
+    // Apply visual indentation and strip prefix from sub-labels
+    const isCollapsed = groupStates[groupName] || false;
+    matchingHeaders.forEach(h => {
       const label = h.querySelector('a span') || h.querySelector('span') || h;
       if (label && label.childNodes) {
         for (let node of label.childNodes) {
-          if (node.nodeType === Node.TEXT_NODE && node.nodeValue.includes('admin:')) {
-            node.nodeValue = node.nodeValue.replace(/^admin:\s*/, '').trim();
+          if (node.nodeType === Node.TEXT_NODE && node.nodeValue.includes(groupPrefix)) {
+            node.nodeValue = node.nodeValue.replace(new RegExp('^' + groupPrefix + '\\\\s*'), '').trim();
           }
         }
       }
@@ -102,18 +107,19 @@ SWAGGER_NESTED_ACCORDION_JS = """
     return true;
   }
 
-  // Poll until Swagger UI DOM is available
+  function updateAllGroups() {
+    setupGroupMinimizer('teams:', 'teams');
+    setupGroupMinimizer('admin:', 'admin');
+  }
+
   const timer = setInterval(() => {
-    if (updateAdminSections()) {
-      // Periodic check
-    }
+    updateAllGroups();
   }, 150);
 
   setTimeout(() => clearInterval(timer), 8000);
 
-  // Observe DOM for subsequent renders / route expansions
   const observer = new MutationObserver(() => {
-    updateAdminSections();
+    updateAllGroups();
   });
   observer.observe(document.body, { childList: true, subtree: true });
 })();
