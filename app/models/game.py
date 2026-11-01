@@ -15,6 +15,7 @@ class GameState(Base):
     start_at: Mapped[datetime] = mapped_column(primary_key=True)
     end_at: Mapped[datetime] = mapped_column(nullable=False)
     paused_until: Mapped[datetime] = mapped_column(nullable=False)
+    last: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
 
 class StorePrice(Base):
