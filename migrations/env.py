@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.models.admin import Admin
 from app.models.content import Path, Question
 from app.models.game import FinalLeaderboard, GameState, StorePrice
-from app.models.logs import TeamLog, TeamPathEvent
+from app.models.logs import TeamLog
 from app.models.progress import TeamQuestionState
 from app.models.team import Team
 from app.models.base import Base
