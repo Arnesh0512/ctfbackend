@@ -25,6 +25,16 @@ async def ensure_bucket_exists(client: httpx.AsyncClient, base_url: str, headers
             )
 
 
+def extract_s3_object_path(url: str) -> str | None:
+    """Extract object path if url is a public Supabase S3 link for current bucket, else None."""
+    if not settings.supabase_url:
+        return None
+    base = f"{settings.supabase_url.rstrip('/')}/storage/v1/object/public/{settings.supabase_storage_bucket}/"
+    if url.startswith(base):
+        return url[len(base):]
+    return None
+
+
 async def upload_file_to_supabase(
     content: bytes,
     filename: str,
@@ -35,7 +45,7 @@ async def upload_file_to_supabase(
     """Upload binary content to Supabase Storage in bucket 'monuments'.
 
     Hierarchy:
-    monuments/<state-monument>/<sha256>/<filename>
+    monuments/<state-monument>/<sha256_16chars>/<filename>
     (replacing spaces and underscores in state and monument with '-')
     """
     if not settings.supabase_url or not settings.supabase_service_role_key:
@@ -80,3 +90,21 @@ async def upload_file_to_supabase(
             )
 
     return f"{base_url}/storage/v1/object/public/{bucket}/{object_path}"
+
+
+async def delete_file_from_supabase(object_path: str) -> bool:
+    """Delete an object from Supabase Storage bucket. Returns True if deleted."""
+    if not settings.supabase_url or not settings.supabase_service_role_key:
+        return False
+
+    base_url = settings.supabase_url.rstrip("/")
+    bucket = settings.supabase_storage_bucket
+    delete_url = f"{base_url}/storage/v1/object/{bucket}"
+    headers = {
+        "Authorization": f"Bearer {settings.supabase_service_role_key}",
+        "apikey": settings.supabase_service_role_key,
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        res = await client.request("DELETE", delete_url, headers=headers, json={"prefixes": [object_path]})
+        return res.status_code in (200, 204)
