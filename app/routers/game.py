@@ -15,7 +15,14 @@ async def get_state(db: DB) -> GameStateOut:
     now = utcnow()
 
     if game and game.paused_until and now < game.paused_until:
-        return GameStateOut(message="PAUSED")
-    if game and game.start_at <= now < game.end_at:
-        return GameStateOut(message="ACTIVE")
-    return GameStateOut(message="PASSIVE")
+        message = "PAUSED"
+    elif game and game.start_at <= now < game.end_at:
+        message = "ACTIVE"
+    else:
+        message = "PASSIVE"
+
+    return GameStateOut(
+        message=message,
+        start_at=game.start_at if game else None,
+        end_at=game.end_at if game else None,
+    )
