@@ -24,19 +24,18 @@ async def upload_file(
 ) -> FileUploadOut:
     """Upload a file (e.g. image, zip) to Supabase S3 Storage.
 
-    If question_id is provided in the body, links the returned public S3 URL into
-    the question's file_path database array.
-    """
-    target_qid = body.question_id
+    Hierarchy in 'monuments' bucket:
+    <state-monument>/<sha256>/<filename>
+    (replacing spaces and underscores in state and monument with '-')
 
-    question: Question | None = None
-    if target_qid is not None:
-        question = await db.get(Question, target_qid)
-        if question is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Question '{target_qid}' not found in database.",
-            )
+    Links the public S3 URL into the question's file_path database array.
+    """
+    question = await db.get(Question, body.question_id)
+    if question is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Question '{body.question_id}' not found in database.",
+        )
 
     content = await file.read()
     if not content:
@@ -45,27 +44,25 @@ async def upload_file(
             detail="Uploaded file is empty.",
         )
 
-    folder = str(target_qid) if target_qid else None
     public_url = await upload_file_to_supabase(
         content=content,
         filename=file.filename or "file",
+        state=question.state,
+        monument=question.monument,
         content_type=file.content_type or "application/octet-stream",
-        folder=folder,
     )
 
-    stored_files: list[str] | None = None
-    if question is not None:
-        current_files = list(question.file_path) if question.file_path else []
-        if public_url not in current_files:
-            current_files.append(public_url)
-            question.file_path = current_files
-        await db.commit()
-        await db.refresh(question)
-        stored_files = question.file_path
+    current_files = list(question.file_path) if question.file_path else []
+    if public_url not in current_files:
+        current_files.append(public_url)
+        question.file_path = current_files
+
+    await db.commit()
+    await db.refresh(question)
 
     return FileUploadOut(
         url=public_url,
         filename=file.filename or "file",
-        question_id=target_qid,
-        file_path=stored_files,
+        question_id=question.question_id,
+        file_path=question.file_path,
     )

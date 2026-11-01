@@ -1,3 +1,4 @@
+import hashlib
 import re
 from pathlib import Path
 
@@ -27,22 +28,33 @@ async def ensure_bucket_exists(client: httpx.AsyncClient, base_url: str, headers
 async def upload_file_to_supabase(
     content: bytes,
     filename: str,
+    state: str,
+    monument: str,
     content_type: str = "application/octet-stream",
-    folder: str | None = None,
 ) -> str:
-    """Upload binary content to Supabase Storage and return the public URL."""
+    """Upload binary content to Supabase Storage in bucket 'monuments'.
+
+    Hierarchy:
+    monuments/<state-monument>/<sha256>/<filename>
+    (replacing spaces and underscores in state and monument with '-')
+    """
     if not settings.supabase_url or not settings.supabase_service_role_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Supabase credentials (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) are not configured.",
         )
 
-    clean_name = re.sub(r"[^\w\.-]", "_", Path(filename).name)
-    if not clean_name:
-        clean_name = "file"
+    clean_name = re.sub(r"[^\w\.-]", "_", Path(filename).name) or "file"
+
+    # Format <state-monument> with spaces and underscores replaced by '-'
+    raw_monument_path = f"{state.strip()}-{monument.strip()}"
+    monument_folder = re.sub(r"[\s_]+", "-", raw_monument_path).strip("-")
+
+    # Compute SHA-256 of file content
+    file_sha = hashlib.sha256(content).hexdigest()
 
     bucket = settings.supabase_storage_bucket
-    object_path = f"{folder}/{clean_name}" if folder else f"uploads/{clean_name}"
+    object_path = f"{monument_folder}/{file_sha}/{clean_name}"
 
     base_url = settings.supabase_url.rstrip("/")
     upload_url = f"{base_url}/storage/v1/object/{bucket}/{object_path}"
@@ -53,7 +65,7 @@ async def upload_file_to_supabase(
         "Content-Type": content_type,
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         res = await client.post(upload_url, headers=headers, content=content)
 
         # Auto-create bucket if missing and retry once

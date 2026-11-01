@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     supabase_url: str = ""
     supabase_service_role_key: str = ""
-    supabase_storage_bucket: str = "questions"
+    supabase_storage_bucket: str = "monuments"
 
     @field_validator("api_prefix")
     @classmethod
