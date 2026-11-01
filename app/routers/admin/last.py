@@ -1,10 +1,8 @@
-from datetime import timedelta
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
-from app.core.clock import utcnow
 from app.deps import DB
 from app.models.content import Path, Question
 from app.models.game import GameState
@@ -42,14 +40,10 @@ async def set_last_question(
 
     game = await db.scalar(select(GameState))
     if not game:
-        now = utcnow()
-        game = GameState(
-            start_at=now,
-            end_at=now + timedelta(hours=2),
-            paused_until=now,
-            last=None,
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Game state has not been initialized. Please create game start and end time first.",
         )
-        db.add(game)
 
     if target_qid is None:
         game.last = None
@@ -100,7 +94,12 @@ async def get_last_question(
 ) -> QuestionDetailOut:
     """Send admin the complete question details for the question configured in game_state.last."""
     game = await db.scalar(select(GameState))
-    if not game or not game.last:
+    if not game:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Game state has not been initialized. Please create game start and end time first.",
+        )
+    if not game.last:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No last question is currently configured.",
