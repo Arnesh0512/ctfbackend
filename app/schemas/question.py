@@ -1,5 +1,6 @@
-import uuid
+from datetime import datetime
 from decimal import Decimal
+import uuid
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -34,3 +35,66 @@ class QuestionCreateOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     question_id: uuid.UUID = Field(..., description="Generated question ID")
+
+
+class QuestionSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    question_id: uuid.UUID = Field(..., description="Question ID")
+    title: str = Field(..., description="Question title")
+    current_points: Decimal = Field(..., description="Current point value")
+    location: str = Field(..., description="Formatted location <state-monument>")
+
+
+class QuestionDetailOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    question_id: uuid.UUID = Field(..., description="Question ID")
+    title: str = Field(..., description="Question title")
+    monument: str = Field(..., description="Monument name")
+    state: str = Field(..., description="State name")
+    story: str = Field(..., description="Challenge story/description")
+    hint1: str = Field(..., description="First hint")
+    hint2: str = Field(..., description="Second hint")
+    file_path: list[str] | None = Field(default=None, description="List of file links")
+    flag: str = Field(..., description="Flag string")
+    base_points: Decimal = Field(..., description="Base points")
+    current_points: Decimal = Field(..., description="Current points")
+    decay_rate: Decimal = Field(..., description="Decay rate")
+    retries: int = Field(..., description="Allowed retries")
+    is_viewed: bool = Field(..., description="Whether viewed")
+    first_solved_at: datetime | None = Field(default=None, description="First solved timestamp")
+    first_solved_by_team_id: uuid.UUID | None = Field(default=None, description="First solver team ID")
+    is_blocked: datetime | None = Field(default=None, description="Blocked until timestamp")
+    unlocked_by_team_id: list[uuid.UUID] | None = Field(default=None, description="Teams that unlocked question")
+
+
+class QuestionUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(default=None, min_length=1, description="Question title")
+    monument: str | None = Field(default=None, min_length=1, description="Monument name")
+    state: str | None = Field(default=None, min_length=1, description="State name")
+    story: str | None = Field(default=None, min_length=1, description="Challenge story")
+    hint1: str | None = Field(default=None, min_length=1, description="First hint")
+    hint2: str | None = Field(default=None, min_length=1, description="Second hint")
+    flag: str | None = Field(default=None, min_length=1, description="Flag string")
+    base_points: Decimal | None = Field(default=None, ge=0, description="Base points")
+    retries: int | None = Field(default=None, ge=0, description="Allowed retry count")
+
+    @field_validator("title", "monument", "state", "story", "hint1", "hint2", "flag")
+    @classmethod
+    def _validate_non_empty(cls, v: str | None) -> str | None:
+        if v is not None:
+            stripped = v.strip()
+            if not stripped:
+                raise ValueError("Field cannot be empty or only whitespace")
+            return stripped
+        return v
+
+
+class QuestionDeleteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    message: str = Field(..., description="Status message")
+    question_id: uuid.UUID = Field(..., description="Deleted question ID")
