@@ -6,11 +6,12 @@ from app.deps import DB
 from app.models.game import GameState
 from app.schemas.game import GameStateOut
 
-router = APIRouter(prefix="/admin/game", tags=["admin: /game"])
+router = APIRouter(prefix="/game", tags=["admin: /game"])
 
 
 @router.get("/state", response_model=GameStateOut, summary="Get Game State")
 async def get_state(db: DB) -> GameStateOut:
+    """Fetch current game state."""
     game = await db.scalar(select(GameState))
     now = utcnow()
 

@@ -13,13 +13,7 @@ import app.models.progress
 import app.models.team
 from app.routers.admin import router as admin_router
 from app.routers.events import router as events_router
-from app.routers.file import router as file_router
-from app.routers.game import router as game_router
-from app.routers.path import router as path_router
-from app.routers.question import router as question_router
-from app.routers.store import router as store_router
-from app.routers.teams import router as teams_router
-from app.routers.time import router as time_router
+from app.routers.team import router as team_router
 
 SWAGGER_NESTED_ACCORDION_JS = """
 <script>
@@ -169,17 +163,11 @@ def create_app() -> FastAPI:
         return {"status": "ok", "service": "mayasabha-ctf-backend"}
 
     # Include Participant / Public routers FIRST
-    app.include_router(teams_router, prefix=prefix)
+    app.include_router(team_router, prefix=prefix)
     app.include_router(events_router, prefix=prefix)
 
-    # Include Admin routers CONTIGUOUSLY
+    # Include Admin master router (containing auth, team, game, time, store, file, question, path)
     app.include_router(admin_router, prefix=prefix)
-    app.include_router(game_router, prefix=prefix)
-    app.include_router(time_router, prefix=prefix)
-    app.include_router(store_router, prefix=prefix)
-    app.include_router(file_router, prefix=prefix)
-    app.include_router(question_router, prefix=prefix)
-    app.include_router(path_router, prefix=prefix)
 
     return app
 

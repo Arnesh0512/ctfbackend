@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 
 from app.deps import DB
 from app.models.content import Question
-from app.routers.time import verify_admin
+from app.routers.admin.deps import verify_admin
 from app.schemas.file import (
     FileDeleteIn,
     FileDeleteOut,
@@ -19,7 +19,7 @@ from app.services.storage import (
     upload_file_to_supabase,
 )
 
-router = APIRouter(prefix="/admin/file", tags=["admin: /file"], dependencies=[Depends(verify_admin)])
+router = APIRouter(prefix="/file", tags=["admin: /file"], dependencies=[Depends(verify_admin)])
 
 
 @router.post(

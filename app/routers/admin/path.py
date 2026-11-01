@@ -1,15 +1,12 @@
-from datetime import UTC
 import re
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
-from app.core.clock import utcnow
 from app.deps import DB
 from app.models.content import Path, Question
-from app.models.game import GameState
-from app.routers.time import verify_admin
+from app.routers.admin.deps import _assert_before_game_start, verify_admin
 from app.schemas.path import (
     PathCreateIn,
     PathCreateOut,
@@ -19,21 +16,7 @@ from app.schemas.path import (
     PathUpdateIn,
 )
 
-router = APIRouter(prefix="/admin/path", tags=["admin: /path"], dependencies=[Depends(verify_admin)])
-
-
-async def _assert_before_game_start(db: DB, action: str = "create") -> None:
-    """Ensure paths cannot be created, updated, or deleted after game start."""
-    game = await db.scalar(select(GameState))
-    if game:
-        start_at = game.start_at
-        if start_at.tzinfo is None:
-            start_at = start_at.replace(tzinfo=UTC)
-        if utcnow() >= start_at:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Cannot {action} paths after the game has started.",
-            )
+router = APIRouter(prefix="/path", tags=["admin: /path"], dependencies=[Depends(verify_admin)])
 
 
 def _format_location(state: str, monument: str) -> str:

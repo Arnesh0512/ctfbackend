@@ -1,4 +1,3 @@
-from datetime import UTC
 from decimal import Decimal
 import re
 import uuid
@@ -6,11 +5,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
-from app.core.clock import utcnow
 from app.deps import DB
 from app.models.content import Path, Question
-from app.models.game import GameState
-from app.routers.time import verify_admin
+from app.routers.admin.deps import _assert_before_game_start, verify_admin
 from app.schemas.question import (
     QuestionCreateIn,
     QuestionCreateOut,
@@ -21,21 +18,7 @@ from app.schemas.question import (
 )
 from app.services.storage import delete_files_from_supabase, extract_s3_object_path
 
-router = APIRouter(prefix="/admin/question", tags=["admin: /question"], dependencies=[Depends(verify_admin)])
-
-
-async def _assert_before_game_start(db: DB, action: str = "modify") -> None:
-    """Ensure questions cannot be created, updated, or deleted after the game has started."""
-    game = await db.scalar(select(GameState))
-    if game:
-        start_at = game.start_at
-        if start_at.tzinfo is None:
-            start_at = start_at.replace(tzinfo=UTC)
-        if utcnow() >= start_at:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Cannot {action} questions after the game has started.",
-            )
+router = APIRouter(prefix="/question", tags=["admin: /question"], dependencies=[Depends(verify_admin)])
 
 
 def _format_location(state: str, monument: str) -> str:

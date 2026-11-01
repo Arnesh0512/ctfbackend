@@ -5,18 +5,10 @@ from sqlalchemy import select
 
 from app.deps import DB
 from app.models.game import GameState
-from app.routers.admin import get_admin_token
+from app.routers.admin.deps import verify_admin
 from app.schemas.game import TimeIn, TimeOut
-from app.verify.admin import verify_admin_payload
-from app.verify.token import verify_access_token
 
-
-async def verify_admin(db: DB, token: str = Depends(get_admin_token)) -> None:
-    payload = verify_access_token(token)
-    await verify_admin_payload(payload, db)
-
-
-router = APIRouter(prefix="/admin/time", tags=["admin: /time"], dependencies=[Depends(verify_admin)])
+router = APIRouter(prefix="/time", tags=["admin: /time"], dependencies=[Depends(verify_admin)])
 
 
 def _timeout(game: GameState, message: str) -> TimeOut:
