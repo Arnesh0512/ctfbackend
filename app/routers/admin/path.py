@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from app.deps import DB
 from app.models.content import Path, Question
+from app.models.game import GameState
 from app.routers.admin.deps import _assert_before_game_start, verify_admin
 from app.schemas.path import (
     PathCreateIn,
@@ -103,7 +104,15 @@ async def create_path(
                     detail=f"Question IDs {overlap_strs} are already assigned to path '{p.path_name}'.",
                 )
 
-    # 4. Create and store new path
+    # 4. Check none of the question_ids is configured as the last/final question
+    game = await db.scalar(select(GameState))
+    if game and game.last and game.last in incoming_set:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Question ID '{game.last}' is configured as the last question and cannot be assigned to a path.",
+        )
+
+    # 5. Create and store new path
     new_path = Path(
         path_id=uuid.uuid4(),
         path_name=body.path_name,
@@ -230,6 +239,14 @@ async def update_path(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Question IDs {overlap_strs} are already assigned to path '{p.path_name}'.",
                     )
+
+        # Check none of the question IDs are configured as the last/final question
+        game = await db.scalar(select(GameState))
+        if game and game.last and game.last in incoming_set:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Question ID '{game.last}' is configured as the last question and cannot be assigned to a path.",
+            )
 
         path.questions = body.question_ids
 

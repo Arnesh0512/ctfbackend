@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.deps import DB
 from app.models.content import Path, Question
+from app.models.game import GameState
 from app.routers.admin.deps import _assert_before_game_start, verify_admin
 from app.schemas.question import (
     QuestionCreateIn,
@@ -175,6 +176,11 @@ async def delete_question(
     for p in paths:
         if p.questions and question_id in p.questions:
             p.questions = [qid for qid in p.questions if qid != question_id]
+
+    # Also clean up from game_state.last if set
+    game = await db.scalar(select(GameState))
+    if game and game.last == question_id:
+        game.last = None
 
     await db.delete(question)
     await db.commit()
