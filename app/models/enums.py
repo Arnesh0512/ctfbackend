@@ -17,20 +17,14 @@ class QuestionEvent(StrEnum):
     SKIPPED = "skipped"
     WAIT_APPLY = "wait_apply"
     CANCELLED_TIMER = "cancelled_timer"
-    LEAVE = "leave"
     H1_PURCHASED = "h1_purchased"
     H2_PURCHASED = "h2_purchased"
     H12_PURCHASED = "h12_purchased"
-    BLOCKED = "blocked"
-
-
-class PathEvent(StrEnum):
     START = "start"
-    CLEARED = "cleared"
     LEFT = "left"
     WAIT = "wait"
+    NO_WAIT = "no_wait"
     END = "end"
-    CANCELLED = "cancelled"
 
 
 def str_enum(enum_cls: type[StrEnum]) -> Enum:
