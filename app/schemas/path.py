@@ -107,3 +107,10 @@ class PathDeleteOut(BaseModel):
 
     message: str = Field(..., description="Status message")
     path_id: uuid.UUID = Field(..., description="Deleted path ID")
+
+
+class TeamPathOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    path_id: uuid.UUID = Field(..., description="Path ID")
+    question_id: uuid.UUID | None = Field(..., description="First question ID in the path")
