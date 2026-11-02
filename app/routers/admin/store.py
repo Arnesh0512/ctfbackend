@@ -54,8 +54,11 @@ async def update_store_item(body: StorePriceIn, db: DB) -> StorePriceOut:
     return StorePriceOut.model_validate(item)
 
 
-@router.delete("/{power_up}", response_model=StorePriceDeleteOut, summary="Delete a store item by path parameter")
-async def delete_store_item_by_path(power_up: str, db: DB) -> StorePriceDeleteOut:
+@router.delete("", response_model=StorePriceDeleteOut, summary="Delete a store item")
+async def delete_store_item(
+    power_up: str = Query(..., description="Name of the power-up to delete"),
+    db: DB = None,
+) -> StorePriceDeleteOut:
     """Delete a store power-up item by power_up name (Requires Admin JWT)."""
     power_up = power_up.strip()
     item = await db.get(StorePrice, power_up)
@@ -71,9 +74,3 @@ async def delete_store_item_by_path(power_up: str, db: DB) -> StorePriceDeleteOu
         message=f"Store item '{power_up}' deleted successfully",
         power_up=power_up,
     )
-
-
-@router.delete("", response_model=StorePriceDeleteOut, summary="Delete a store item by query parameter")
-async def delete_store_item_by_query(power_up: str = Query(..., description="Name of the power-up to delete"), db: DB = None) -> StorePriceDeleteOut:
-    """Delete a store power-up item by power_up query param (Requires Admin JWT)."""
-    return await delete_store_item_by_path(power_up=power_up, db=db)

@@ -5,7 +5,7 @@ from app.deps import DB
 from app.models.game import StorePrice
 from app.schemas.store import StorePriceOut
 
-router = APIRouter(prefix="/store", tags=["store: /store"])
+router = APIRouter(prefix="/store", tags=["teams: /store"])
 
 
 @router.get("", response_model=list[StorePriceOut], summary="Get all store items (Public, No JWT)")
