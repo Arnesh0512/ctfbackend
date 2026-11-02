@@ -1,9 +1,9 @@
-from datetime import timedelta
 from decimal import Decimal
+from typing import Any
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from app.core.calculate import calculate_question_points
 from app.core.clock import utcnow
@@ -132,7 +132,7 @@ async def save_question(
     3. Checks retry count limit.
     4. Checks question block state.
     5. Evaluates answer:
-       - Correct: calculates points, adds to team.points, logs ANSWER_CORRECT, advances or marks reached Delhi.
+       - Correct: calculates points, adds to team points, logs ANSWER_CORRECT, advances or marks reached Delhi.
        - Wrong: logs ANSWER_WRONG and returns error message with remaining retries.
     """
     game_state = await db.scalar(select(GameState))
@@ -147,10 +147,6 @@ async def save_question(
     if not question:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
 
-    team = await db.get(Team, current_team.team_id)
-    if not team:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found.")
-
     # Step 1: Check timestamp
     backend_timestamp = getattr(request.state, "received_at", None) or utcnow()
     validate_frontend_timestamp(
@@ -159,30 +155,27 @@ async def save_question(
         start_at=game_state.start_at,
         end_at=game_state.end_at,
         paused_until=game_state.paused_until,
-        frozen_until=team.frozen_until,
+        frozen_until=current_team.frozen_until,
     )
 
     # Step 2: Path & question validation + start logging
-    was_start = False
-    if team.current_question_id is None and team.current_path_id is None:
+    is_unstarted = current_team.current_question_id is None and current_team.current_path_id is None
+    if is_unstarted:
         if not path_obj.questions or question_id != path_obj.questions[0]:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Wrong question")
 
         # Log START event
         start_log = TeamLog(
-            team_id=team.team_id,
+            team_id=current_team.team_id,
             question_id=question_id,
             path_id=body.path_id,
             event_type=QuestionEvent.START,
             created_at=body.frontend_timestamp,
-            points=team.points,
+            points=current_team.points,
         )
         db.add(start_log)
-        team.current_question_id = question_id
-        team.current_path_id = body.path_id
-        was_start = True
     else:
-        if team.current_question_id != question_id or team.current_path_id != body.path_id:
+        if current_team.current_question_id != question_id or current_team.current_path_id != body.path_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Wrong question")
 
     # Step 3: Check retry count
@@ -192,7 +185,7 @@ async def save_question(
             func.count().filter(TeamLog.event_type == QuestionEvent.RETRY_PURCHASED).label("retry_count"),
         )
         .where(
-            TeamLog.team_id == team.team_id,
+            TeamLog.team_id == current_team.team_id,
             TeamLog.question_id == question_id,
             TeamLog.path_id == body.path_id,
         )
@@ -208,7 +201,7 @@ async def save_question(
     if (
         question.is_blocked is not None
         and body.frontend_timestamp < question.is_blocked
-        and (question.unlocked_by_team_id is None or team.team_id not in question.unlocked_by_team_id)
+        and (question.unlocked_by_team_id is None or current_team.team_id not in question.unlocked_by_team_id)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -216,25 +209,29 @@ async def save_question(
         )
 
     # Step 5: Answer evaluation (exact case-sensitive comparison)
-    second_log_time = body.frontend_timestamp + timedelta(microseconds=1 if was_start else 0)
-
     if body.answer != question.flag:
         # Wrong answer
         wrong_log = TeamLog(
-            team_id=team.team_id,
+            team_id=current_team.team_id,
             question_id=question_id,
             path_id=body.path_id,
             event_type=QuestionEvent.ANSWER_WRONG,
-            created_at=second_log_time,
-            points=team.points,
+            created_at=body.frontend_timestamp,
+            points=current_team.points,
         )
         db.add(wrong_log)
+        if is_unstarted:
+            await db.execute(
+                update(Team)
+                .where(Team.team_id == current_team.team_id)
+                .values(current_question_id=question_id, current_path_id=body.path_id)
+            )
         await db.commit()
         remaining = (question.retries + retry_count) - (wrong_count + 1)
         return TeamQuestionSaveOut(
             correct=False,
             message="Answer wrong",
-            current_points=team.points,
+            current_points=current_team.points,
             remaining_retries=max(0, remaining),
         )
 
@@ -246,28 +243,38 @@ async def save_question(
         question.base_points,
     )
     points = Decimal(str(calc_points)) if calc_points is not None else question.base_points
-    team.points += points
+    new_points = current_team.points + points
 
     correct_log = TeamLog(
-        team_id=team.team_id,
+        team_id=current_team.team_id,
         question_id=question_id,
         path_id=body.path_id,
         event_type=QuestionEvent.ANSWER_CORRECT,
-        created_at=second_log_time,
-        points=team.points,
+        created_at=body.frontend_timestamp,
+        points=new_points,
     )
     db.add(correct_log)
 
     actions: list[dict[str, str]] = []
     if question.first_solved_at is None:
         question.first_solved_at = body.frontend_timestamp
-        question.first_solved_by_team_id = team.team_id
+        question.first_solved_by_team_id = current_team.team_id
         actions.append({"Enable": "Block"})
 
     idx = path_obj.questions.index(question_id)
     if idx + 1 < len(path_obj.questions):
         next_qid = path_obj.questions[idx + 1]
-        team.current_question_id = next_qid
+        team_updates: dict[str, Any] = {
+            "points": new_points,
+            "current_question_id": next_qid,
+        }
+        if is_unstarted:
+            team_updates["current_path_id"] = body.path_id
+        await db.execute(
+            update(Team)
+            .where(Team.team_id == current_team.team_id)
+            .values(**team_updates)
+        )
         await db.commit()
         return TeamQuestionSaveOut(
             correct=True,
@@ -275,24 +282,34 @@ async def save_question(
             next_question_id=next_qid,
             has_reached_delhi=False,
             points_awarded=points,
-            current_points=team.points,
+            current_points=new_points,
             actions=actions,
         )
     else:
         # Reached Delhi!
-        team.has_reached_delhi = body.frontend_timestamp
         # NOTE: Do NOT set current_question_id as None (per user request!)
-        third_log_time = body.frontend_timestamp + timedelta(microseconds=2 if was_start else 1)
         end_log = TeamLog(
-            team_id=team.team_id,
+            team_id=current_team.team_id,
             question_id=question_id,
             path_id=body.path_id,
             event_type=QuestionEvent.END,
-            created_at=third_log_time,
-            points=team.points,
+            created_at=body.frontend_timestamp,
+            points=new_points,
         )
         db.add(end_log)
         actions.append({"enable": "path_change"})
+        team_updates = {
+            "points": new_points,
+            "has_reached_delhi": body.frontend_timestamp,
+        }
+        if is_unstarted:
+            team_updates["current_question_id"] = question_id
+            team_updates["current_path_id"] = body.path_id
+        await db.execute(
+            update(Team)
+            .where(Team.team_id == current_team.team_id)
+            .values(**team_updates)
+        )
         await db.commit()
         return TeamQuestionSaveOut(
             correct=True,
@@ -300,6 +317,6 @@ async def save_question(
             next_question_id=None,
             has_reached_delhi=True,
             points_awarded=points,
-            current_points=team.points,
+            current_points=new_points,
             actions=actions,
         )
