@@ -1,6 +1,10 @@
+from decimal import Decimal
+from typing import Literal
 import uuid
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+
+from app.schemas.common import LocalDatetime
 
 
 class PathCreateIn(BaseModel):
@@ -122,3 +126,25 @@ class TeamCurrentPathOut(BaseModel):
     current_path_id: uuid.UUID | None = Field(
         default=None, description="Current path ID assigned to the team"
     )
+
+
+PathChangeType = Literal["COST", "TIME"]
+
+
+class TeamPathChangeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    new_path_id: uuid.UUID = Field(..., description="ID of the new path to change to")
+    type: PathChangeType = Field(..., description="Change mechanism: COST (deduct points) or TIME (freeze team)")
+    question_id: uuid.UUID = Field(..., description="Current question ID team is on")
+    frontend_timestamp: LocalDatetime = Field(..., description="Client interaction timestamp in IST")
+
+
+class TeamPathChangeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    message: str = Field(..., description="Status message")
+    current_path_id: uuid.UUID = Field(..., description="New current path ID")
+    current_question_id: uuid.UUID = Field(..., description="New current question ID")
+    points: Decimal = Field(..., description="Current team points")
+    frozen_until: LocalDatetime | None = Field(default=None, description="Frozen until timestamp (if TIME type)")
