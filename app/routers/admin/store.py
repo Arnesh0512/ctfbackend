@@ -2,7 +2,7 @@ import logging
 from decimal import Decimal
 from typing import Union
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 
@@ -53,8 +53,38 @@ async def get_all_store_items(db: DB) -> list[StorePriceOut]:
     ),
 )
 async def update_store_items(
-    body: Union[StorePriceUpdate, list[StorePriceUpdate]],
-    db: DB,
+    body: Union[StorePriceUpdate, list[StorePriceUpdate]] = Body(
+        ...,
+        description="Single power-up object or list of power-up objects to update",
+        openapi_examples={
+            "Patch All 9 Power-Ups (List)": {
+                "summary": "Update all 9 standard power-ups at once as a list",
+                "value": [
+                    {"power_up": "RETRY", "value": 0.0},
+                    {"power_up": "HINT1", "value": 0.0},
+                    {"power_up": "HINT2", "value": 0.0},
+                    {"power_up": "HINT12", "value": 0.0},
+                    {"power_up": "BLOCK", "value": 0.0},
+                    {"power_up": "UNBLOCK", "value": 0.0},
+                    {"power_up": "DEVTIME", "value": 0.0},
+                    {"power_up": "PATHCHANGEC", "value": 0.0},
+                    {"power_up": "PATHCHANGET", "value": 0.0},
+                ],
+            },
+            "Patch Single Power-Up": {
+                "summary": "Update a single power-up",
+                "value": {"power_up": "RETRY", "value": 50.0},
+            },
+            "Patch Multiple Select Power-Ups (List)": {
+                "summary": "Update a subset of power-ups as a list",
+                "value": [
+                    {"power_up": "RETRY", "value": 50.0},
+                    {"power_up": "HINT1", "value": 20.0},
+                ],
+            },
+        },
+    ),
+    db: DB = None,
 ) -> Union[StorePriceOut, list[StorePriceOut]]:
     """Update one or multiple store power-up prices (Requires Admin JWT)."""
     is_single = isinstance(body, StorePriceUpdate)
