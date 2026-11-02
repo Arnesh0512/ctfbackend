@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -152,3 +153,26 @@ class TeamQuestionSaveOut(BaseModel):
     current_points: Decimal = Field(..., description="Updated total team points")
     actions: list[dict[str, str]] = Field(default_factory=list, description="Enabled actions")
     remaining_retries: int | None = Field(default=None, description="Remaining retries if answer is wrong")
+
+
+class HintType(StrEnum):
+    HINT1 = "HINT1"
+    HINT2 = "HINT2"
+    HINT12 = "HINT12"
+
+
+class TeamQuestionHintIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path_id: uuid.UUID = Field(..., description="Active path ID")
+    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+    hint_type: HintType = Field(..., description="Hint type to purchase or view (HINT1, HINT2, HINT12)")
+
+
+class TeamQuestionHintOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    hint1: str | None = Field(default=None, description="Hint 1 text if unlocked")
+    hint2: str | None = Field(default=None, description="Hint 2 text if unlocked")
+    points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for hint purchase")
+    current_points: Decimal = Field(..., description="Updated total team points")

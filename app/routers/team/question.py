@@ -5,19 +5,22 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select, update
 
-from app.core.calculate import calculate_question_points
+from app.core.calculate import calculate_hint_value, calculate_question_points
 from app.core.clock import utcnow
 from app.core.events import broadcaster
 from app.core.time import validate_frontend_timestamp
 from app.deps import DB
 from app.models.content import Path, Question
 from app.models.enums import QuestionEvent
-from app.models.game import GameState
+from app.models.game import GameState, StorePrice
 from app.models.logs import TeamLog
 from app.models.team import Team
 from app.routers.team.auth import get_current_team
 from app.schemas.question import (
+    HintType,
     TeamCurrentQuestionOut,
+    TeamQuestionHintIn,
+    TeamQuestionHintOut,
     TeamQuestionSaveIn,
     TeamQuestionSaveOut,
     TeamQuestionViewIn,
@@ -320,3 +323,192 @@ async def save_question(
             current_points=new_points,
             actions=actions,
         )
+
+
+@router.post("/hint/{question_id}", response_model=TeamQuestionHintOut, summary="View or purchase a question hint")
+async def get_question_hint(
+    question_id: uuid.UUID,
+    body: TeamQuestionHintIn,
+    request: Request,
+    current_team: TeamOut = Depends(get_current_team),
+    db: DB = None,
+) -> TeamQuestionHintOut:
+    """
+    View or purchase a hint for a question (Requires Team JWT):
+    Step 1: Check frontend_timestamp against game clock and freeze state.
+    Step 2: Validate question & path against team state (if null, logs START and locks team path/question).
+    Step 3: Check if question is blocked.
+    Step 4: Unified hint check / purchase:
+       - If HINT12 requested and H1/H2 already purchased, reject (cannot buy two at once).
+       - If requested hint is already owned (including via H12_PURCHASED), return hint(s) for 0 points.
+       - Else calculate hint cost, verify team points, deduct, log purchase event, and return hint(s).
+    """
+    game_state = await db.scalar(select(GameState))
+    if not game_state:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game state not found.")
+
+    path_obj = await db.get(Path, body.path_id)
+    if not path_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Path not found.")
+
+    question = await db.get(Question, question_id)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
+
+    # Step 1: Check timestamp
+    backend_timestamp = getattr(request.state, "received_at", None) or utcnow()
+    validate_frontend_timestamp(
+        frontend_timestamp=body.frontend_timestamp,
+        backend_timestamp=backend_timestamp,
+        start_at=game_state.start_at,
+        end_at=game_state.end_at,
+        paused_until=game_state.paused_until,
+        frozen_until=current_team.frozen_until,
+    )
+
+    # Step 2: Path & question validation + start logging
+    is_unstarted = current_team.current_question_id is None and current_team.current_path_id is None
+    if is_unstarted:
+        if not path_obj.questions or question_id != path_obj.questions[0]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Wrong question")
+
+        start_log = TeamLog(
+            team_id=current_team.team_id,
+            question_id=question_id,
+            path_id=body.path_id,
+            event_type=QuestionEvent.START,
+            created_at=body.frontend_timestamp,
+            points=current_team.points,
+        )
+        db.add(start_log)
+    else:
+        if current_team.current_question_id != question_id or current_team.current_path_id != body.path_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Wrong question")
+
+    # Step 3: Check if question is blocked
+    if (
+        question.is_blocked is not None
+        and body.frontend_timestamp < question.is_blocked
+        and (question.unlocked_by_team_id is None or current_team.team_id not in question.unlocked_by_team_id)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Question is blocked until {question.is_blocked.isoformat()}",
+        )
+
+    # Step 4: Hint purchase / view
+    stmt = select(TeamLog.event_type).where(
+        TeamLog.team_id == current_team.team_id,
+        TeamLog.question_id == question_id,
+        TeamLog.path_id == body.path_id,
+        TeamLog.event_type.in_([
+            QuestionEvent.H1_PURCHASED,
+            QuestionEvent.H2_PURCHASED,
+            QuestionEvent.H12_PURCHASED,
+        ]),
+    )
+    purchased_events = set((await db.scalars(stmt)).all())
+
+    # HINT12 mutual exclusion check
+    if body.hint_type == HintType.HINT12 and (
+        QuestionEvent.H1_PURCHASED in purchased_events or QuestionEvent.H2_PURCHASED in purchased_events
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="One hint already purchased, cannot purchase two at once",
+        )
+
+    # Configuration for hint mapping
+    hint_config = {
+        HintType.HINT1: {
+            "event": QuestionEvent.H1_PURCHASED,
+            "store_key": "HINT1",
+            "hints": {"hint1": question.hint1},
+            "already_owned": (
+                QuestionEvent.H1_PURCHASED in purchased_events
+                or QuestionEvent.H12_PURCHASED in purchased_events
+            ),
+        },
+        HintType.HINT2: {
+            "event": QuestionEvent.H2_PURCHASED,
+            "store_key": "HINT2",
+            "hints": {"hint2": question.hint2},
+            "already_owned": (
+                QuestionEvent.H2_PURCHASED in purchased_events
+                or QuestionEvent.H12_PURCHASED in purchased_events
+            ),
+        },
+        HintType.HINT12: {
+            "event": QuestionEvent.H12_PURCHASED,
+            "store_key": "HINT12",
+            "hints": {"hint1": question.hint1, "hint2": question.hint2},
+            "already_owned": QuestionEvent.H12_PURCHASED in purchased_events,
+        },
+    }
+    cfg = hint_config[body.hint_type]
+
+    # If already owned, return without charging
+    if cfg["already_owned"]:
+        if is_unstarted:
+            await db.execute(
+                update(Team)
+                .where(Team.team_id == current_team.team_id)
+                .values(current_question_id=question_id, current_path_id=body.path_id)
+            )
+            await db.commit()
+        return TeamQuestionHintOut(
+            **cfg["hints"],
+            points_deducted=Decimal("0.00"),
+            current_points=current_team.points,
+        )
+
+    # Otherwise, calculate cost and purchase
+    calc_points = calculate_question_points(
+        question.is_viewed,
+        game_state.start_at,
+        body.frontend_timestamp,
+        question.base_points,
+    )
+    points = Decimal(str(calc_points)) if calc_points is not None else question.base_points
+
+    store_item = await db.get(StorePrice, cfg["store_key"])
+    multiplier = store_item.value if (store_item and store_item.value is not None) else Decimal("0.00")
+
+    calc_hint = calculate_hint_value(points, multiplier)
+    hint_cost = Decimal(str(calc_hint)) if calc_hint is not None else (points * multiplier)
+
+    if current_team.points < hint_cost:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot buy hint: insufficient points",
+        )
+
+    new_points = current_team.points - hint_cost
+
+    purchase_log = TeamLog(
+        team_id=current_team.team_id,
+        question_id=question_id,
+        path_id=body.path_id,
+        event_type=cfg["event"],
+        created_at=body.frontend_timestamp,
+        points=new_points,
+    )
+    db.add(purchase_log)
+
+    team_updates: dict[str, Any] = {"points": new_points}
+    if is_unstarted:
+        team_updates["current_question_id"] = question_id
+        team_updates["current_path_id"] = body.path_id
+
+    await db.execute(
+        update(Team)
+        .where(Team.team_id == current_team.team_id)
+        .values(**team_updates)
+    )
+    await db.commit()
+
+    return TeamQuestionHintOut(
+        **cfg["hints"],
+        points_deducted=hint_cost,
+        current_points=new_points,
+    )
