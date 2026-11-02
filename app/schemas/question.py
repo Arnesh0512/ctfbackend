@@ -66,10 +66,10 @@ class QuestionDetailOut(BaseModel):
     current_points: Decimal = Field(..., description="Current points")
     end_point: Decimal = Field(..., description="Minimum points floor")
     retries: int = Field(..., description="Allowed retries")
-    is_viewed: datetime | None = Field(default=None, description="First viewed timestamp")
-    first_solved_at: datetime | None = Field(default=None, description="First solved timestamp")
+    is_viewed: LocalDatetime | None = Field(default=None, description="First viewed timestamp")
+    first_solved_at: LocalDatetime | None = Field(default=None, description="First solved timestamp")
     first_solved_by_team_id: uuid.UUID | None = Field(default=None, description="First solver team ID")
-    is_blocked: datetime | None = Field(default=None, description="Blocked until timestamp")
+    is_blocked: LocalDatetime | None = Field(default=None, description="Blocked until timestamp")
     unlocked_by_team_id: list[uuid.UUID] | None = Field(default=None, description="Teams that unlocked question")
 
 
@@ -120,7 +120,7 @@ class TeamQuestionViewIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path_id: uuid.UUID = Field(..., description="Selected route/path ID")
-    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+    frontend_timestamp: LocalDatetime = Field(..., description="Client interaction timestamp")
 
 
 class TeamQuestionViewOut(BaseModel):
@@ -133,14 +133,14 @@ class TeamQuestionViewOut(BaseModel):
     story: str
     file_path: list[str] | None = None
     base_points: Decimal
-    is_viewed: datetime | None = None
+    is_viewed: LocalDatetime | None = None
 
 
 class TeamQuestionSaveIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path_id: uuid.UUID = Field(..., description="Active path ID")
-    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+    frontend_timestamp: LocalDatetime = Field(..., description="Client interaction timestamp")
     answer: str = Field(..., min_length=1, description="Submitted flag answer")
 
 
@@ -167,7 +167,7 @@ class TeamQuestionHintIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path_id: uuid.UUID = Field(..., description="Active path ID")
-    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+    frontend_timestamp: LocalDatetime = Field(..., description="Client interaction timestamp")
     hint_type: HintType = Field(..., description="Hint type to purchase or view (HINT1, HINT2, HINT12)")
 
 
@@ -184,7 +184,7 @@ class TeamQuestionRetryIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path_id: uuid.UUID = Field(..., description="Active path ID")
-    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+    frontend_timestamp: LocalDatetime = Field(..., description="Client interaction timestamp")
 
 
 class TeamQuestionRetryOut(BaseModel):
@@ -200,7 +200,7 @@ class TeamQuestionBlockIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path_id: uuid.UUID = Field(..., description="Active path ID")
-    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+    frontend_timestamp: LocalDatetime = Field(..., description="Client interaction timestamp")
     point: Decimal = Field(..., gt=0, description="Points to spend on blocking the question")
 
 

@@ -1,11 +1,10 @@
-from datetime import UTC
 from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 
-from app.core.clock import utcnow
+from app.core.clock import istnow, to_ist
 from app.core.cookies import ADMIN_COOKIE
 from app.core.supabase_auth import fetch_admin_from_postgrest
 from app.deps import DB
@@ -47,10 +46,8 @@ async def _assert_before_game_start(db: DB, action: str = "modify") -> None:
     """Ensure operations cannot occur after the game has started."""
     game = await db.scalar(select(GameState))
     if game:
-        start_at = game.start_at
-        if start_at.tzinfo is None:
-            start_at = start_at.replace(tzinfo=UTC)
-        if utcnow() >= start_at:
+        start_at = to_ist(game.start_at)
+        if istnow() >= start_at:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Cannot {action} after the game has started.",

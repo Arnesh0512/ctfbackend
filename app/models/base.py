@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import JSON, DateTime, MetaData
@@ -7,7 +7,7 @@ from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator
 
-from app.core.clock import utcnow
+from app.core.clock import to_local, utcnow
 
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -26,14 +26,12 @@ class UTCDateTime(TypeDecorator[datetime]):
     def process_bind_param(self, value: datetime | None, dialect: Dialect) -> Any:
         if value is None:
             return None
-        if value.tzinfo is None:
-            raise ValueError("naive datetimes are not allowed")
-        return value.astimezone(UTC)
+        return to_local(value)
 
     def process_result_value(self, value: Any, dialect: Dialect) -> datetime | None:
-        if value is not None and value.tzinfo is None:
-            return value.replace(tzinfo=UTC)
-        return value
+        if value is None:
+            return None
+        return to_local(value)
 
 
 JSONType = JSON().with_variant(JSONB(), "postgresql")

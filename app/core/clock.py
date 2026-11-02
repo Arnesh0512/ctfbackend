@@ -16,10 +16,12 @@ def utcnow() -> datetime:
     return datetime.now(LOCAL_TZ)
 
 
-def to_local(value: datetime | None) -> datetime | None:
-    """Convert datetime to configured local timezone (IST)."""
+def to_local(value: datetime | str | None) -> datetime | None:
+    """Convert datetime or ISO string to configured local timezone (IST)."""
     if value is None:
         return None
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value)
     if value.tzinfo is None:
         value = value.replace(tzinfo=LOCAL_TZ)
     return value.astimezone(LOCAL_TZ)

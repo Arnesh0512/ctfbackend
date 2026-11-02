@@ -38,10 +38,10 @@ class TeamOut(BaseModel):
     otp_valid: bool = False
     points: Decimal
     powerups_used: int
-    has_reached_delhi: datetime | None = None
+    has_reached_delhi: LocalDatetime | None = None
     current_path_id: uuid.UUID | None = None
     current_question_id: uuid.UUID | None = None
-    frozen_until: datetime | None = None
+    frozen_until: LocalDatetime | None = None
     developer_time: bool = False
     skip: uuid.UUID | None = None
 
@@ -107,7 +107,7 @@ class TeamMe(BaseModel):
     team_name: str
     points: Decimal
     powerups_used: int
-    has_reached_delhi: datetime | None = None
+    has_reached_delhi: LocalDatetime | None = None
     current_path_id: uuid.UUID | None = None
     frozen_until: LocalDatetime | None = None
     leader_details: LeaderDetails | None = None
