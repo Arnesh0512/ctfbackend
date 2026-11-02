@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS "teams" (
     "current_path_id" UUID,
     "current_question_id" UUID,
     "frozen_until" TIMESTAMPTZ,
-    "developer_time" TIME DEFAULT '00:00:00',
+    "developer_time" BOOLEAN NOT NULL DEFAULT false,
     "skip" UUID,
     PRIMARY KEY("team_id"),
     CONSTRAINT fk_teams_current_path_id_paths FOREIGN KEY ("current_path_id") REFERENCES "paths"("path_id") ON DELETE SET NULL,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS "teams" (
 | `current_path_id`| `UUID` | Yes | `NULL` | FK to currently chosen route |
 | `current_question_id`| `UUID` | Yes | `NULL` | Current question being attempted |
 | `frozen_until`| `TIMESTAMPTZ` | Yes | `NULL` | Lockout expiration timestamp |
-| `developer_time`| `TIME` | Yes | `'00:00:00'` | Debug/developer timer |
+| `developer_time`| `BOOLEAN` | No | `false` | Developer time flag |
 | `skip` | `UUID` | Yes | `NULL` | Question skipped |
 
 ---

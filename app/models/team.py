@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime, time
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, Numeric, String, Text, Time
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -40,5 +40,5 @@ class Team(Base):
         UUID(as_uuid=True), ForeignKey("questions.question_id", ondelete="SET NULL"), nullable=True, default=None
     )
     frozen_until: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
-    developer_time: Mapped[time | None] = mapped_column(Time, nullable=True, default=time(0, 0, 0))
+    developer_time: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     skip: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, default=None)

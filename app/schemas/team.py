@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, time
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -42,7 +42,7 @@ class TeamOut(BaseModel):
     current_path_id: uuid.UUID | None = None
     current_question_id: uuid.UUID | None = None
     frozen_until: datetime | None = None
-    developer_time: time | None = None
+    developer_time: bool = False
     skip: uuid.UUID | None = None
 
 

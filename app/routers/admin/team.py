@@ -1,4 +1,3 @@
-from datetime import time
 from decimal import Decimal
 import uuid
 
@@ -55,7 +54,7 @@ async def create_team(
         current_path_id=None,
         current_question_id=None,
         frozen_until=None,
-        developer_time=time(0, 0, 0),
+        developer_time=False,
         skip=None,
     )
 
