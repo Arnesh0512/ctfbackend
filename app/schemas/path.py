@@ -114,3 +114,11 @@ class TeamPathOut(BaseModel):
 
     path_id: uuid.UUID = Field(..., description="Path ID")
     question_id: uuid.UUID | None = Field(..., description="First question ID in the path")
+
+
+class TeamCurrentPathOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    current_path_id: uuid.UUID | None = Field(
+        default=None, description="Current path ID assigned to the team"
+    )

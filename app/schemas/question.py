@@ -100,3 +100,14 @@ class QuestionDeleteOut(BaseModel):
 
     message: str = Field(..., description="Status message")
     question_id: uuid.UUID = Field(..., description="Deleted question ID")
+
+
+class TeamCurrentQuestionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    current_question_id: uuid.UUID | None = Field(
+        default=None, description="Current question ID assigned to the team"
+    )
+    current_path_id: uuid.UUID | None = Field(
+        default=None, description="Current path ID assigned to the team"
+    )

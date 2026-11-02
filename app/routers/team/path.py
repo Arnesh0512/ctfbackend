@@ -1,9 +1,12 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.deps import DB
 from app.models.content import Path
-from app.schemas.path import TeamPathOut
+from app.models.team import Team
+from app.routers.team.auth import get_current_team
+from app.schemas.path import TeamCurrentPathOut, TeamPathOut
+from app.schemas.team import TeamOut
 
 router = APIRouter(prefix="/path", tags=["teams: /path"])
 
@@ -22,3 +25,18 @@ async def get_team_paths(db: DB) -> list[TeamPathOut]:
         )
         for p in paths
     ]
+
+
+@router.get("/current", response_model=TeamCurrentPathOut, summary="Get current path for team")
+async def get_current_team_path(
+    current_team: TeamOut = Depends(get_current_team),
+    db: DB = None,
+) -> TeamCurrentPathOut:
+    """Fetch the current_path_id for the authenticated team (Requires Team JWT)."""
+    team = await db.get(Team, current_team.team_id)
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found.",
+        )
+    return TeamCurrentPathOut(current_path_id=team.current_path_id)
