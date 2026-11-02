@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -12,6 +14,7 @@ import app.models.logs
 import app.models.progress
 import app.models.team
 from app.routers.admin import router as admin_router
+from app.routers.admin.store import init_store_prices
 from app.routers.events import router as events_router
 from app.routers.team import router as team_router
 
@@ -127,11 +130,19 @@ SWAGGER_NESTED_ACCORDION_JS = """
 """
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure standard store power-ups exist on application startup
+    await init_store_prices()
+    yield
+
+
 def create_app() -> FastAPI:
     prefix = settings.api_prefix
     docs = settings.docs_enabled
     app = FastAPI(
         title="MAYASABHA CTF BACKEND",
+        lifespan=lifespan,
         docs_url=None,  # Handled via custom endpoint below to inject nested accordion script
         redoc_url=None,
         openapi_url=f"{prefix}/openapi.json" if docs else None,
