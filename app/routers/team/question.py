@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select, update
 
-from app.core.calculate import calculate_hint_value, calculate_question_points
+from app.core.calculate import calculate_hint_value, calculate_question_points, calculate_retry_value
 from app.core.clock import utcnow
 from app.core.events import broadcaster
 from app.core.time import validate_frontend_timestamp
@@ -21,6 +21,8 @@ from app.schemas.question import (
     TeamCurrentQuestionOut,
     TeamQuestionHintIn,
     TeamQuestionHintOut,
+    TeamQuestionRetryIn,
+    TeamQuestionRetryOut,
     TeamQuestionSaveIn,
     TeamQuestionSaveOut,
     TeamQuestionViewIn,
@@ -511,4 +513,139 @@ async def get_question_hint(
         **cfg["hints"],
         points_deducted=hint_cost,
         current_points=new_points,
+    )
+
+
+@router.post("/retry/{question_id}", response_model=TeamQuestionRetryOut, summary="Purchase a retry for a question")
+async def purchase_question_retry(
+    question_id: uuid.UUID,
+    body: TeamQuestionRetryIn,
+    request: Request,
+    current_team: TeamOut = Depends(get_current_team),
+    db: DB = None,
+) -> TeamQuestionRetryOut:
+    """
+    Purchase a retry for a question (Requires Team JWT):
+    Step 1: Check frontend_timestamp against game clock and freeze state.
+    Step 2: Validate question & path against team state:
+       - If unstarted (current_question_id is None): return 400 "First exhaust question retries".
+       - If active: verify question_id & path_id match current progress.
+    Step 3: Check if question is blocked.
+    Step 4: Verify that current retries are exhausted (wrong_count >= retries + retry_count).
+    Step 5: Calculate retry cost, verify team points, deduct, log RETRY_PURCHASED, and update team.
+    """
+    game_state = await db.scalar(select(GameState))
+    if not game_state:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game state not found.")
+
+    path_obj = await db.get(Path, body.path_id)
+    if not path_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Path not found.")
+
+    question = await db.get(Question, question_id)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
+
+    # Step 1: Check timestamp
+    backend_timestamp = getattr(request.state, "received_at", None) or utcnow()
+    validate_frontend_timestamp(
+        frontend_timestamp=body.frontend_timestamp,
+        backend_timestamp=backend_timestamp,
+        start_at=game_state.start_at,
+        end_at=game_state.end_at,
+        paused_until=game_state.paused_until,
+        frozen_until=current_team.frozen_until,
+    )
+
+    # Step 2: Validate question & path progression
+    if current_team.current_question_id is None and current_team.current_path_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="First exhaust question retries",
+        )
+
+    if current_team.current_question_id != question_id or current_team.current_path_id != body.path_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Wrong question",
+        )
+
+    # Step 3: Check if question is blocked
+    if (
+        question.is_blocked is not None
+        and body.frontend_timestamp < question.is_blocked
+        and (question.unlocked_by_team_id is None or current_team.team_id not in question.unlocked_by_team_id)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Question is blocked until {question.is_blocked.isoformat()}",
+        )
+
+    # Step 4: Verify current retries are exhausted
+    stmt = (
+        select(
+            func.count().filter(TeamLog.event_type == QuestionEvent.ANSWER_WRONG).label("wrong_count"),
+            func.count().filter(TeamLog.event_type == QuestionEvent.RETRY_PURCHASED).label("retry_count"),
+        )
+        .where(
+            TeamLog.team_id == current_team.team_id,
+            TeamLog.question_id == question_id,
+            TeamLog.path_id == body.path_id,
+        )
+    )
+    counts = (await db.execute(stmt)).one()
+    wrong_count = counts.wrong_count or 0
+    retry_count = counts.retry_count or 0
+
+    if wrong_count < (question.retries + retry_count):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="First exhaust question retries",
+        )
+
+    # Step 5: Calculate retry cost and purchase
+    calc_points = calculate_question_points(
+        question.is_viewed,
+        game_state.start_at,
+        body.frontend_timestamp,
+        question.base_points,
+    )
+    points = Decimal(str(calc_points)) if calc_points is not None else question.base_points
+
+    store_item = await db.get(StorePrice, "RETRY")
+    multiplier = store_item.value if (store_item and store_item.value is not None) else Decimal("0.00")
+
+    calc_retry = calculate_retry_value(points, multiplier)
+    retry_cost = Decimal(str(calc_retry)) if calc_retry is not None else (points * multiplier)
+
+    if current_team.points < retry_cost:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot buy retry: insufficient points",
+        )
+
+    new_points = current_team.points - retry_cost
+
+    retry_log = TeamLog(
+        team_id=current_team.team_id,
+        question_id=question_id,
+        path_id=body.path_id,
+        event_type=QuestionEvent.RETRY_PURCHASED,
+        created_at=body.frontend_timestamp,
+        points=new_points,
+    )
+    db.add(retry_log)
+
+    await db.execute(
+        update(Team)
+        .where(Team.team_id == current_team.team_id)
+        .values(points=new_points)
+    )
+    await db.commit()
+
+    return TeamQuestionRetryOut(
+        message="Retry purchased successfully",
+        points_deducted=retry_cost,
+        current_points=new_points,
+        remaining_retries=1,
     )

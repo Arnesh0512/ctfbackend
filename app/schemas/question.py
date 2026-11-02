@@ -176,3 +176,19 @@ class TeamQuestionHintOut(BaseModel):
     hint2: str | None = Field(default=None, description="Hint 2 text if unlocked")
     points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for hint purchase")
     current_points: Decimal = Field(..., description="Updated total team points")
+
+
+class TeamQuestionRetryIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path_id: uuid.UUID = Field(..., description="Active path ID")
+    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+
+
+class TeamQuestionRetryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    message: str = Field(default="Retry purchased successfully", description="Status message")
+    points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for retry purchase")
+    current_points: Decimal = Field(..., description="Updated total team points")
+    remaining_retries: int = Field(default=1, description="Remaining retries available after purchase")
