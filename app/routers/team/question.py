@@ -11,6 +11,7 @@ from app.core.calculate import (
     calculate_hint_value,
     calculate_question_points,
     calculate_retry_value,
+    calculate_unblock_cost,
 )
 from app.core.clock import istnow, to_ist, utcnow
 from app.core.events import broadcaster
@@ -33,6 +34,8 @@ from app.schemas.question import (
     TeamQuestionRetryOut,
     TeamQuestionSaveIn,
     TeamQuestionSaveOut,
+    TeamQuestionUnblockIn,
+    TeamQuestionUnblockOut,
     TeamQuestionViewIn,
     TeamQuestionViewOut,
 )
@@ -833,5 +836,131 @@ async def block_question(
         message="Question blocked successfully",
         is_blocked=blocked_until,
         points_deducted=body.point,
+        current_points=new_points,
+    )
+
+
+@router.post("/unblock/{question_id}", response_model=TeamQuestionUnblockOut, summary="Unblock a question")
+async def unblock_question(
+    question_id: uuid.UUID,
+    body: TeamQuestionUnblockIn,
+    request: Request,
+    current_team: TeamOut = Depends(get_current_team),
+    db: DB = None,
+) -> TeamQuestionUnblockOut:
+    """
+    Unblock a question (Requires Team JWT):
+    Step 1: Check frontend_timestamp against game clock and freeze state.
+    Step 2: Validate question & path progression:
+        - If unstarted: verify question_id is first question of path, log START event, set team progression.
+        - Else: verify current_question_id == question_id and current_path_id == body.path_id.
+    Step 3: Validate block status:
+        - If question is not blocked or block expired (<= frontend_timestamp): return 400 "Question is unblocked for all".
+        - If already unblocked for current team: return 400 "Question is already unblocked for your team".
+    Step 4: Calculate unblock cost, deduct points, unlock question for team, and log UNBLOCKED.
+    """
+    game_state = await db.scalar(select(GameState))
+    if not game_state:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game state not found.")
+
+    path_obj = await db.get(Path, body.path_id)
+    if not path_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Path not found.")
+
+    question = await db.get(Question, question_id)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
+
+    # Step 1: Check timestamp
+    body.frontend_timestamp = to_ist(body.frontend_timestamp)
+    backend_timestamp = to_ist(getattr(request.state, "received_at", None)) or istnow()
+    validate_frontend_timestamp(
+        frontend_timestamp=body.frontend_timestamp,
+        backend_timestamp=backend_timestamp,
+        start_at=game_state.start_at,
+        end_at=game_state.end_at,
+        paused_until=game_state.paused_until,
+        frozen_until=current_team.frozen_until,
+    )
+
+    # Step 2: Validate question & path progression
+    is_unstarted = current_team.current_question_id is None and current_team.current_path_id is None
+    if is_unstarted:
+        if not path_obj.questions or question_id != path_obj.questions[0]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Wrong question",
+            )
+        start_log = TeamLog(
+            team_id=current_team.team_id,
+            question_id=question_id,
+            path_id=body.path_id,
+            event_type=QuestionEvent.START,
+            created_at=to_ist(body.frontend_timestamp),
+            points=current_team.points,
+        )
+        db.add(start_log)
+    else:
+        if current_team.current_path_id != body.path_id or current_team.current_question_id != question_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Wrong question",
+            )
+
+    # Step 3: Validate block status
+    if question.is_blocked is None or to_ist(question.is_blocked) <= to_ist(body.frontend_timestamp):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Question is unblocked for all",
+        )
+
+    if question.unlocked_by_team_id and current_team.team_id in question.unlocked_by_team_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Question is already unblocked for your team",
+        )
+
+    # Step 4: Calculate cost, deduct points, unlock question, and log
+    rem_seconds = (to_ist(question.is_blocked) - to_ist(body.frontend_timestamp)).total_seconds()
+    store_item = await db.get(StorePrice, "UNBLOCK")
+    multiplier = store_item.value if (store_item and store_item.value is not None) else Decimal("0.00")
+
+    calc_cost = calculate_unblock_cost(rem_seconds, multiplier)
+    cost = Decimal(str(calc_cost)) if calc_cost is not None else Decimal(str(round(rem_seconds))) * multiplier
+
+    if current_team.points < cost:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Insufficient points to unblock question",
+        )
+
+    new_points = current_team.points - cost
+    question.unlocked_by_team_id = list(question.unlocked_by_team_id or []) + [current_team.team_id]
+
+    unblock_log = TeamLog(
+        team_id=current_team.team_id,
+        question_id=question_id,
+        path_id=body.path_id,
+        event_type=QuestionEvent.UNBLOCKED,
+        created_at=to_ist(body.frontend_timestamp),
+        points=new_points,
+    )
+    db.add(unblock_log)
+
+    team_updates: dict[str, Any] = {"points": new_points}
+    if is_unstarted:
+        team_updates["current_question_id"] = question_id
+        team_updates["current_path_id"] = body.path_id
+
+    await db.execute(
+        update(Team)
+        .where(Team.team_id == current_team.team_id)
+        .values(**team_updates)
+    )
+    await db.commit()
+
+    return TeamQuestionUnblockOut(
+        message="Question unblocked successfully",
+        points_deducted=cost,
         current_points=new_points,
     )

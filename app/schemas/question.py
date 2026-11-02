@@ -211,3 +211,18 @@ class TeamQuestionBlockOut(BaseModel):
     is_blocked: LocalDatetime = Field(..., description="Blocked until timestamp in IST")
     points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for blocking")
     current_points: Decimal = Field(..., description="Updated total team points")
+
+
+class TeamQuestionUnblockIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path_id: uuid.UUID = Field(..., description="Active path ID")
+    frontend_timestamp: LocalDatetime = Field(..., description="Client interaction timestamp")
+
+
+class TeamQuestionUnblockOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    message: str = Field(default="Question unblocked successfully", description="Status message")
+    points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for unblocking")
+    current_points: Decimal = Field(..., description="Updated total team points")
