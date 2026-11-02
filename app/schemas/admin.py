@@ -9,7 +9,7 @@ from app.schemas.team import LeaderDetails
 class AdminLoginIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    admin_name: str = Field(..., min_length=1, max_length=256, description="Admin username")
+    admin_email: str = Field(..., min_length=1, max_length=256, description="Admin email")
     passcode: str = Field(..., min_length=1, max_length=256, description="Admin secret passcode")
 
 
@@ -24,7 +24,7 @@ class AdminLoginOut(BaseModel):
 # Admin Session
 class AdminSession(BaseModel):
     admin_id: uuid.UUID
-    admin_name: str
+    admin_email: str
 
 
 # Team credentials list item for admin

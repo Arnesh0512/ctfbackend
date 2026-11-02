@@ -24,7 +24,6 @@ class CreateTeamIn(BaseModel):
     team_members: list[str] = Field(default_factory=list, description="List of team member names")
     leader_details: LeaderDetails = Field(..., description="Leader contact details")
     username: str = Field(..., min_length=1, max_length=256, description="Unique login username")
-    password: str = Field(..., min_length=1, max_length=256, description="Team login password")
 
 
 class TeamOut(BaseModel):
@@ -35,6 +34,7 @@ class TeamOut(BaseModel):
     team_members: list[str] | None = None
     leader_details: LeaderDetails
     username: str
+    password: str
     otp_valid: bool = False
     points: Decimal
     powerups_used: int
@@ -46,6 +46,22 @@ class TeamOut(BaseModel):
     skip: uuid.UUID | None = None
 
 
+class TeamCredentialsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    team_id: uuid.UUID = Field(..., description="Target team UUID")
+
+
+class TeamCredentialsOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    team_id: uuid.UUID
+    team_name: str
+    username: str
+    password: str
+    otp_valid: bool
+
+
 # Team Login Request
 class TeamLoginIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -54,9 +70,11 @@ class TeamLoginIn(BaseModel):
     password: str = Field(..., min_length=1, max_length=256, description="Team password")
 
 
-# Team Login Response (JWT stored in HttpOnly cookie, not visible in body)
+# Team Login Response
 class TeamLoginOut(BaseModel):
     message: str = "Login successful"
+    access_token: str
+    token_type: str = "bearer"
     team_id: uuid.UUID
     role: str = "team"
 

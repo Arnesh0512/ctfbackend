@@ -13,5 +13,5 @@ class Admin(Base):
     admin_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    admin_name: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
+    admin_email: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
     passcode: Mapped[str] = mapped_column(String(256), nullable=False)

@@ -10,13 +10,13 @@ from app.models.admin import Admin
 
 
 async def verify_admin_credentials(
-    admin_name: str,
+    admin_email: str,
     passcode: str,
     db: AsyncSession,
 ) -> Admin:
     """Verify admin login credentials against the database."""
-    admin_name = admin_name.strip()
-    admin = await db.scalar(select(Admin).where(Admin.admin_name == admin_name))
+    admin_email = admin_email.strip()
+    admin = await db.scalar(select(Admin).where(Admin.admin_email == admin_email))
     if not admin:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -70,4 +70,4 @@ async def verify_admin_payload(
             detail="Admin not found",
         )
 
-    return admin, admin.admin_id, admin.admin_name
+    return admin, admin.admin_id, admin.admin_email
