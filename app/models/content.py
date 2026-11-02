@@ -37,7 +37,7 @@ class Question(Base):
     flag: Mapped[str] = mapped_column(Text, nullable=False)
     base_points: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     current_points: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    decay_rate: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    end_point: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
     retries: Mapped[int] = mapped_column(Integer, nullable=False)
     is_viewed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     first_solved_at: Mapped[datetime | None] = mapped_column(nullable=True)

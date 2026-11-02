@@ -22,10 +22,10 @@ class TeamLog(Base):
         UUID(as_uuid=True), ForeignKey("teams.team_id", ondelete="CASCADE"), primary_key=True
     )
     question_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("questions.question_id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("questions.question_id", ondelete="NO ACTION"), nullable=False
     )
     path_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("paths.path_id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("paths.path_id", ondelete="NO ACTION"), nullable=False
     )
     event_type: Mapped[QuestionEvent] = mapped_column(str_enum(QuestionEvent), nullable=False)
     created_at: Mapped[datetime] = mapped_column(primary_key=True, default=utcnow)

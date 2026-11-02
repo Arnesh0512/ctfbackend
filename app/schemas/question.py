@@ -20,6 +20,7 @@ class QuestionCreateIn(BaseModel):
     )
     flag: str = Field(..., min_length=1, description="Flag string")
     base_points: Decimal = Field(..., ge=0, description="Base points for the question")
+    end_point: Decimal = Field(..., ge=0, description="Floor / minimum score for the question")
     retries: int = Field(..., ge=0, description="Allowed retry count")
 
     @field_validator("title", "monument", "state", "story", "hint1", "hint2", "flag")
@@ -60,7 +61,7 @@ class QuestionDetailOut(BaseModel):
     flag: str = Field(..., description="Flag string")
     base_points: Decimal = Field(..., description="Base points")
     current_points: Decimal = Field(..., description="Current points")
-    decay_rate: Decimal = Field(..., description="Decay rate")
+    end_point: Decimal = Field(..., description="Minimum points floor")
     retries: int = Field(..., description="Allowed retries")
     is_viewed: bool = Field(..., description="Whether viewed")
     first_solved_at: datetime | None = Field(default=None, description="First solved timestamp")
@@ -80,6 +81,7 @@ class QuestionUpdateIn(BaseModel):
     hint2: str | None = Field(default=None, min_length=1, description="Second hint")
     flag: str | None = Field(default=None, min_length=1, description="Flag string")
     base_points: Decimal | None = Field(default=None, ge=0, description="Base points")
+    end_point: Decimal | None = Field(default=None, ge=0, description="Floor / minimum score")
     retries: int | None = Field(default=None, ge=0, description="Allowed retry count")
 
     @field_validator("title", "monument", "state", "story", "hint1", "hint2", "flag")

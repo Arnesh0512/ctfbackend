@@ -30,7 +30,6 @@ async def create_store_item(body: StorePriceIn, db: DB) -> StorePriceOut:
     new_item = StorePrice(
         power_up=power_up,
         value=body.value,
-        multiplier=body.multiplier,
     )
     db.add(new_item)
     await db.commit()
@@ -50,8 +49,6 @@ async def update_store_item(body: StorePriceIn, db: DB) -> StorePriceOut:
 
     if body.value is not None:
         item.value = body.value
-    if body.multiplier is not None:
-        item.multiplier = body.multiplier
 
     await db.commit()
     return StorePriceOut.model_validate(item)

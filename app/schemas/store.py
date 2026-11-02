@@ -8,7 +8,6 @@ class StorePriceIn(BaseModel):
 
     power_up: str = Field(..., min_length=1, max_length=64, description="Power-up name")
     value: Decimal | None = Field(default=None, ge=0, description="Cost / value of the power-up")
-    multiplier: Decimal | None = Field(default=None, ge=0, description="Multiplier for the power-up")
 
 
 class StorePriceOut(BaseModel):
@@ -16,4 +15,3 @@ class StorePriceOut(BaseModel):
 
     power_up: str
     value: Decimal | None = None
-    multiplier: Decimal | None = None

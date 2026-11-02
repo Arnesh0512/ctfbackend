@@ -52,7 +52,7 @@ async def create_question(
         flag=body.flag,
         base_points=body.base_points,
         current_points=body.base_points,
-        decay_rate=Decimal("0.00"),
+        end_point=body.end_point,
         retries=body.retries,
         is_viewed=False,
         first_solved_at=None,

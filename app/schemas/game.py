@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Literal
+import uuid
 
 from pydantic import BaseModel, model_validator
 
@@ -11,6 +12,7 @@ class GameStateOut(BaseModel):
     message: Literal["ACTIVE", "PASSIVE", "PAUSED"]
     start_at: datetime | None = None
     end_at: datetime | None = None
+    last: uuid.UUID | None = None
 
 
 class TimeIn(BaseModel):
