@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import HTMLResponse
 
-from app.core.clock import utcnow
+from app.core.clock import istnow, utcnow
 from app.core.config import settings
 from app.core.middleware import OriginGuard
 import app.models.admin
@@ -152,7 +152,7 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def record_request_time(request: Request, call_next):
-        request.state.received_at = utcnow()
+        request.state.received_at = istnow()
         return await call_next(request)
 
     if settings.frontend_origins:

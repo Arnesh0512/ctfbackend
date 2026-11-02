@@ -2,6 +2,8 @@ from datetime import datetime
 
 from fastapi import HTTPException, status
 
+from app.core.clock import to_ist
+
 
 def validate_frontend_timestamp(
     frontend_timestamp: datetime,
@@ -13,8 +15,14 @@ def validate_frontend_timestamp(
 ) -> None:
     """
     Validate frontend_timestamp against game clock and state conditions.
-    Accepts all pre-fetched timestamps to eliminate redundant DB calls.
+    Normalizes all timestamps to IST to ensure consistency.
     """
+    frontend_timestamp = to_ist(frontend_timestamp)
+    backend_timestamp = to_ist(backend_timestamp)
+    start_at = to_ist(start_at)
+    end_at = to_ist(end_at)
+    paused_until = to_ist(paused_until)
+    frozen_until = to_ist(frozen_until)
     # Condition 1: Difference between frontend and backend timestamp must be less than 1 second
     if abs((backend_timestamp - frontend_timestamp).total_seconds()) >= 1.0:
         raise HTTPException(

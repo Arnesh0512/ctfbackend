@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 import uuid
@@ -5,8 +6,13 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select, update
 
-from app.core.calculate import calculate_hint_value, calculate_question_points, calculate_retry_value
-from app.core.clock import utcnow
+from app.core.calculate import (
+    calculate_block_time,
+    calculate_hint_value,
+    calculate_question_points,
+    calculate_retry_value,
+)
+from app.core.clock import istnow, to_ist, utcnow
 from app.core.events import broadcaster
 from app.core.time import validate_frontend_timestamp
 from app.deps import DB
@@ -19,6 +25,8 @@ from app.routers.team.auth import get_current_team
 from app.schemas.question import (
     HintType,
     TeamCurrentQuestionOut,
+    TeamQuestionBlockIn,
+    TeamQuestionBlockOut,
     TeamQuestionHintIn,
     TeamQuestionHintOut,
     TeamQuestionRetryIn,
@@ -73,7 +81,8 @@ async def view_question(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
 
     # Step 1: Validate frontend timestamp
-    backend_timestamp = getattr(request.state, "received_at", None) or utcnow()
+    body.frontend_timestamp = to_ist(body.frontend_timestamp)
+    backend_timestamp = to_ist(getattr(request.state, "received_at", None)) or istnow()
     validate_frontend_timestamp(
         frontend_timestamp=body.frontend_timestamp,
         backend_timestamp=backend_timestamp,
@@ -153,7 +162,8 @@ async def save_question(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
 
     # Step 1: Check timestamp
-    backend_timestamp = getattr(request.state, "received_at", None) or utcnow()
+    body.frontend_timestamp = to_ist(body.frontend_timestamp)
+    backend_timestamp = to_ist(getattr(request.state, "received_at", None)) or istnow()
     validate_frontend_timestamp(
         frontend_timestamp=body.frontend_timestamp,
         backend_timestamp=backend_timestamp,
@@ -358,7 +368,8 @@ async def get_question_hint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
 
     # Step 1: Check timestamp
-    backend_timestamp = getattr(request.state, "received_at", None) or utcnow()
+    body.frontend_timestamp = to_ist(body.frontend_timestamp)
+    backend_timestamp = to_ist(getattr(request.state, "received_at", None)) or istnow()
     validate_frontend_timestamp(
         frontend_timestamp=body.frontend_timestamp,
         backend_timestamp=backend_timestamp,
@@ -547,7 +558,8 @@ async def purchase_question_retry(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
 
     # Step 1: Check timestamp
-    backend_timestamp = getattr(request.state, "received_at", None) or utcnow()
+    body.frontend_timestamp = to_ist(body.frontend_timestamp)
+    backend_timestamp = to_ist(getattr(request.state, "received_at", None)) or istnow()
     validate_frontend_timestamp(
         frontend_timestamp=body.frontend_timestamp,
         backend_timestamp=backend_timestamp,
@@ -648,4 +660,123 @@ async def purchase_question_retry(
         points_deducted=retry_cost,
         current_points=new_points,
         remaining_retries=1,
+    )
+
+
+@router.post("/block/{question_id}", response_model=TeamQuestionBlockOut, summary="Block a question")
+async def block_question(
+    question_id: uuid.UUID,
+    body: TeamQuestionBlockIn,
+    request: Request,
+    current_team: TeamOut = Depends(get_current_team),
+    db: DB = None,
+) -> TeamQuestionBlockOut:
+    """
+    Block a question (Requires Team JWT):
+    Step 1: Check frontend_timestamp against game clock and freeze state.
+    Step 2: Validate question & path progression:
+       - If unstarted (current_question_id is None and current_path_id is None): return 400 "Cannot block unsolved question".
+       - Else verify current_path_id matches body.path_id and question_id is in path_obj.questions.
+    Step 3: Check that team is the first to solve this question.
+    Step 4: Check points, calculate block time, set is_blocked in IST, deduct points, and log BLOCKED.
+    """
+    game_state = await db.scalar(select(GameState))
+    if not game_state:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game state not found.")
+
+    path_obj = await db.get(Path, body.path_id)
+    if not path_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Path not found.")
+
+    question = await db.get(Question, question_id)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
+
+    # Step 1: Check timestamp
+    body.frontend_timestamp = to_ist(body.frontend_timestamp)
+    backend_timestamp = to_ist(getattr(request.state, "received_at", None)) or istnow()
+    validate_frontend_timestamp(
+        frontend_timestamp=body.frontend_timestamp,
+        backend_timestamp=backend_timestamp,
+        start_at=game_state.start_at,
+        end_at=game_state.end_at,
+        paused_until=game_state.paused_until,
+        frozen_until=current_team.frozen_until,
+    )
+
+    # Step 2: Validate question & path progression
+    if current_team.current_question_id is None and current_team.current_path_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot block unsolved question",
+        )
+
+    if current_team.current_path_id != body.path_id or question_id not in path_obj.questions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Wrong question",
+        )
+
+    # Step 3: Check that current team was first to solve
+    if question.first_solved_by_team_id != current_team.team_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You didn't solve it",
+        )
+
+    if question.is_blocked is not None and to_ist(question.is_blocked) > istnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Question is already blocked until {to_ist(question.is_blocked).isoformat()}",
+        )
+
+    # Step 4: Validate points, calculate block duration, and apply
+    calc_orig = calculate_question_points(
+        question.is_viewed,
+        game_state.start_at,
+        question.first_solved_at,
+        question.base_points,
+    )
+    orig_points = Decimal(str(calc_orig)) if calc_orig is not None else question.base_points
+
+    if body.point > orig_points:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You didn't receive this much points",
+        )
+
+    store_item = await db.get(StorePrice, "BLOCK")
+    multiplier = store_item.value if (store_item and store_item.value is not None) else Decimal("0.00")
+
+    calc_block = calculate_block_time(body.point, multiplier)
+    blocked_seconds = int(calc_block) if calc_block is not None else int(body.point * multiplier)
+
+    blocked_until = istnow() + timedelta(seconds=blocked_seconds)
+    question.is_blocked = blocked_until
+    question.unlocked_by_team_id = [current_team.team_id]
+
+    new_points = current_team.points - body.point
+
+    block_log = TeamLog(
+        team_id=current_team.team_id,
+        question_id=question_id,
+        path_id=body.path_id,
+        event_type=QuestionEvent.BLOCKED,
+        created_at=to_ist(body.frontend_timestamp),
+        points=new_points,
+    )
+    db.add(block_log)
+
+    await db.execute(
+        update(Team)
+        .where(Team.team_id == current_team.team_id)
+        .values(points=new_points)
+    )
+    await db.commit()
+
+    return TeamQuestionBlockOut(
+        message="Question blocked successfully",
+        is_blocked=blocked_until,
+        points_deducted=body.point,
+        current_points=new_points,
     )

@@ -5,6 +5,8 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.common import LocalDatetime
+
 
 class QuestionCreateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -192,3 +194,20 @@ class TeamQuestionRetryOut(BaseModel):
     points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for retry purchase")
     current_points: Decimal = Field(..., description="Updated total team points")
     remaining_retries: int = Field(default=1, description="Remaining retries available after purchase")
+
+
+class TeamQuestionBlockIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path_id: uuid.UUID = Field(..., description="Active path ID")
+    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+    point: Decimal = Field(..., gt=0, description="Points to spend on blocking the question")
+
+
+class TeamQuestionBlockOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    message: str = Field(default="Question blocked successfully", description="Status message")
+    is_blocked: LocalDatetime = Field(..., description="Blocked until timestamp in IST")
+    points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for blocking")
+    current_points: Decimal = Field(..., description="Updated total team points")
