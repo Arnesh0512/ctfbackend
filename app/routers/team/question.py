@@ -794,6 +794,12 @@ async def block_question(
             detail="You didn't receive this much points",
         )
 
+    if body.point > current_team.points:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Insufficient points",
+        )
+
     store_item = await db.get(StorePrice, "BLOCK")
     multiplier = store_item.value if (store_item and store_item.value is not None) else Decimal("0.00")
 
