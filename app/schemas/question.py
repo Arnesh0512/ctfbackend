@@ -131,3 +131,24 @@ class TeamQuestionViewOut(BaseModel):
     file_path: list[str] | None = None
     base_points: Decimal
     is_viewed: datetime | None = None
+
+
+class TeamQuestionSaveIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path_id: uuid.UUID = Field(..., description="Active path ID")
+    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+    answer: str = Field(..., min_length=1, description="Submitted flag answer")
+
+
+class TeamQuestionSaveOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    correct: bool = Field(..., description="Whether the answer was correct")
+    message: str = Field(..., description="Result message")
+    next_question_id: uuid.UUID | None = Field(default=None, description="Next question UUID if available")
+    has_reached_delhi: bool = Field(default=False, description="Whether the team has reached Delhi")
+    points_awarded: Decimal = Field(default=Decimal("0.00"), description="Points awarded for this question")
+    current_points: Decimal = Field(..., description="Updated total team points")
+    actions: list[dict[str, str]] = Field(default_factory=list, description="Enabled actions")
+    remaining_retries: int | None = Field(default=None, description="Remaining retries if answer is wrong")
