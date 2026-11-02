@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 
 from app.deps import DB
 from app.models.game import StorePrice
 from app.routers.admin.deps import verify_admin
-from app.schemas.store import StorePriceIn, StorePriceOut
+from app.schemas.store import StorePriceDeleteOut, StorePriceIn, StorePriceOut
 
 router = APIRouter(prefix="/store", tags=["admin: /store"], dependencies=[Depends(verify_admin)])
 
@@ -52,3 +52,28 @@ async def update_store_item(body: StorePriceIn, db: DB) -> StorePriceOut:
 
     await db.commit()
     return StorePriceOut.model_validate(item)
+
+
+@router.delete("/{power_up}", response_model=StorePriceDeleteOut, summary="Delete a store item by path parameter")
+async def delete_store_item_by_path(power_up: str, db: DB) -> StorePriceDeleteOut:
+    """Delete a store power-up item by power_up name (Requires Admin JWT)."""
+    power_up = power_up.strip()
+    item = await db.get(StorePrice, power_up)
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Store item '{power_up}' not found.",
+        )
+
+    await db.delete(item)
+    await db.commit()
+    return StorePriceDeleteOut(
+        message=f"Store item '{power_up}' deleted successfully",
+        power_up=power_up,
+    )
+
+
+@router.delete("", response_model=StorePriceDeleteOut, summary="Delete a store item by query parameter")
+async def delete_store_item_by_query(power_up: str = Query(..., description="Name of the power-up to delete"), db: DB = None) -> StorePriceDeleteOut:
+    """Delete a store power-up item by power_up query param (Requires Admin JWT)."""
+    return await delete_store_item_by_path(power_up=power_up, db=db)

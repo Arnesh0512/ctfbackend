@@ -15,3 +15,8 @@ class StorePriceOut(BaseModel):
 
     power_up: str
     value: Decimal | None = None
+
+
+class StorePriceDeleteOut(BaseModel):
+    message: str = "Store item deleted successfully"
+    power_up: str

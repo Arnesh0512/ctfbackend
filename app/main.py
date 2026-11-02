@@ -14,6 +14,7 @@ import app.models.team
 from app.routers.admin import router as admin_router
 from app.routers.events import router as events_router
 from app.routers.team import router as team_router
+from app.routers.team.store import router as public_store_router
 
 SWAGGER_NESTED_ACCORDION_JS = """
 <script>
@@ -169,6 +170,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "service": "mayasabha-ctf-backend"}
 
     # Include Participant / Public routers FIRST
+    app.include_router(public_store_router, prefix=prefix)
     app.include_router(team_router, prefix=prefix)
     app.include_router(events_router, prefix=prefix)
 
