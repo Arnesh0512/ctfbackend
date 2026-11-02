@@ -676,9 +676,15 @@ async def block_question(
     Step 1: Check frontend_timestamp against game clock and freeze state.
     Step 2: Validate question & path progression:
        - If unstarted (current_question_id is None and current_path_id is None): return 400 "Cannot block unsolved question".
-       - Else verify current_path_id matches body.path_id and question_id is in path_obj.questions.
-    Step 3: Check that team is the first to solve this question.
-    Step 4: Check points, calculate block time, set is_blocked in IST, deduct points, and log BLOCKED.
+       - If current_team.current_path_id != body.path_id or current_team.current_question_id != question_id: return 400 "Wrong question".
+       - If question_id is index 0: return 400 "Wrong question".
+       - If question_id is last of path:
+           - if logs(team_id, question_id, ANSWER_CORRECT) exists: blocked_question_id = question_id
+           - elif logs(team_id, prev_qid, ANSWER_CORRECT) exists: blocked_question_id = prev_qid
+           - else: return 400 "Not solved yet"
+       - else: blocked_question_id = prev question of question_id
+    Step 3: Check blocked_question.first_solved_by_team_id == current_team.team_id (else "You didn't solve it").
+    Step 4: Check points, calculate block time, set blocked_question.is_blocked in IST, deduct points, and log BLOCKED.
     """
     game_state = await db.scalar(select(GameState))
     if not game_state:
@@ -687,10 +693,6 @@ async def block_question(
     path_obj = await db.get(Path, body.path_id)
     if not path_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Path not found.")
-
-    question = await db.get(Question, question_id)
-    if not question:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
 
     # Step 1: Check timestamp
     body.frontend_timestamp = to_ist(body.frontend_timestamp)
@@ -711,33 +713,80 @@ async def block_question(
             detail="Cannot block unsolved question",
         )
 
-    if current_team.current_path_id != body.path_id or question_id not in path_obj.questions:
+    if current_team.current_path_id != body.path_id or current_team.current_question_id != question_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Wrong question",
         )
 
-    # Step 3: Check that current team was first to solve
-    if question.first_solved_by_team_id != current_team.team_id:
+    questions = path_obj.questions
+    if question_id not in questions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Wrong question",
+        )
+
+    idx = questions.index(question_id)
+    if idx == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Wrong question",
+        )
+
+    if idx == len(questions) - 1:
+        # Check if team solved current (last) question
+        stmt_curr = select(TeamLog).where(
+            TeamLog.team_id == current_team.team_id,
+            TeamLog.question_id == question_id,
+            TeamLog.event_type == QuestionEvent.ANSWER_CORRECT,
+        )
+        has_solved_curr = (await db.scalar(stmt_curr)) is not None
+
+        if has_solved_curr:
+            blocked_question_id = question_id
+        else:
+            prev_qid = questions[idx - 1]
+            stmt_prev = select(TeamLog).where(
+                TeamLog.team_id == current_team.team_id,
+                TeamLog.question_id == prev_qid,
+                TeamLog.event_type == QuestionEvent.ANSWER_CORRECT,
+            )
+            has_solved_prev = (await db.scalar(stmt_prev)) is not None
+            if has_solved_prev:
+                blocked_question_id = prev_qid
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Not solved yet",
+                )
+    else:
+        blocked_question_id = questions[idx - 1]
+
+    blocked_question = await db.get(Question, blocked_question_id)
+    if not blocked_question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
+
+    # Step 3: Check that current team was first to solve blocked question
+    if blocked_question.first_solved_by_team_id != current_team.team_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You didn't solve it",
         )
 
-    if question.is_blocked is not None and to_ist(question.is_blocked) > istnow():
+    if blocked_question.is_blocked is not None and to_ist(blocked_question.is_blocked) > istnow():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Question is already blocked until {to_ist(question.is_blocked).isoformat()}",
+            detail=f"Question is already blocked until {to_ist(blocked_question.is_blocked).isoformat()}",
         )
 
     # Step 4: Validate points, calculate block duration, and apply
     calc_orig = calculate_question_points(
-        question.is_viewed,
+        blocked_question.is_viewed,
         game_state.start_at,
-        question.first_solved_at,
-        question.base_points,
+        blocked_question.first_solved_at,
+        blocked_question.base_points,
     )
-    orig_points = Decimal(str(calc_orig)) if calc_orig is not None else question.base_points
+    orig_points = Decimal(str(calc_orig)) if calc_orig is not None else blocked_question.base_points
 
     if body.point > orig_points:
         raise HTTPException(
@@ -752,14 +801,14 @@ async def block_question(
     blocked_seconds = int(calc_block) if calc_block is not None else int(body.point * multiplier)
 
     blocked_until = istnow() + timedelta(seconds=blocked_seconds)
-    question.is_blocked = blocked_until
-    question.unlocked_by_team_id = [current_team.team_id]
+    blocked_question.is_blocked = blocked_until
+    blocked_question.unlocked_by_team_id = [current_team.team_id]
 
     new_points = current_team.points - body.point
 
     block_log = TeamLog(
         team_id=current_team.team_id,
-        question_id=question_id,
+        question_id=blocked_question_id,
         path_id=body.path_id,
         event_type=QuestionEvent.BLOCKED,
         created_at=to_ist(body.frontend_timestamp),
