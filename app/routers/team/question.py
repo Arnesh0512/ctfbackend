@@ -34,6 +34,8 @@ from app.schemas.question import (
     TeamQuestionRetryOut,
     TeamQuestionSaveIn,
     TeamQuestionSaveOut,
+    TeamQuestionSkipIn,
+    TeamQuestionSkipOut,
     TeamQuestionUnblockIn,
     TeamQuestionUnblockOut,
     TeamQuestionViewIn,
@@ -963,4 +965,136 @@ async def unblock_question(
         message="Question unblocked successfully",
         points_deducted=cost,
         current_points=new_points,
+    )
+
+
+@router.post("/skip/{question_id}", response_model=TeamQuestionSkipOut, summary="Skip a question")
+async def skip_question(
+    question_id: uuid.UUID,
+    body: TeamQuestionSkipIn,
+    request: Request,
+    current_team: TeamOut = Depends(get_current_team),
+    db: DB = None,
+) -> TeamQuestionSkipOut:
+    """
+    Skip a question (Requires Team JWT):
+    Step 1: Check frontend_timestamp against game clock and freeze state.
+    Step 2: Validate question & path progression:
+        - If unstarted: verify question_id is first question of path, log START event, set team progression.
+        - Else: verify current_question_id == question_id and current_path_id == body.path_id.
+    Step 3: Validate block status & skip allowance:
+        - If question is blocked and team not in unlocked_by_team_id: return 400 "Question is blocked until ...".
+        - If current_team.skip is not None: return 400 "Already used skip".
+    Step 4: Calculate next question ID, advance team, record skip, log SKIPPED event, and return.
+    """
+    game_state = await db.scalar(select(GameState))
+    if not game_state:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game state not found.")
+
+    path_obj = await db.get(Path, body.path_id)
+    if not path_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Path not found.")
+
+    question = await db.get(Question, question_id)
+    if not question:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
+
+    # Step 1: Check timestamp
+    body.frontend_timestamp = to_ist(body.frontend_timestamp)
+    backend_timestamp = to_ist(getattr(request.state, "received_at", None)) or istnow()
+    validate_frontend_timestamp(
+        frontend_timestamp=body.frontend_timestamp,
+        backend_timestamp=backend_timestamp,
+        start_at=game_state.start_at,
+        end_at=game_state.end_at,
+        paused_until=game_state.paused_until,
+        frozen_until=current_team.frozen_until,
+    )
+
+    # Step 2: Validate question & path progression
+    is_unstarted = current_team.current_question_id is None and current_team.current_path_id is None
+    if is_unstarted:
+        if not path_obj.questions or question_id != path_obj.questions[0]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Wrong question",
+            )
+        start_log = TeamLog(
+            team_id=current_team.team_id,
+            question_id=question_id,
+            path_id=body.path_id,
+            event_type=QuestionEvent.START,
+            created_at=to_ist(body.frontend_timestamp),
+            points=current_team.points,
+        )
+        db.add(start_log)
+    else:
+        if current_team.current_path_id != body.path_id or current_team.current_question_id != question_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Wrong question",
+            )
+
+    # Step 3: Validate block status and skip allowance
+    if (
+        question.is_blocked is not None
+        and to_ist(question.is_blocked) > to_ist(body.frontend_timestamp)
+        and (question.unlocked_by_team_id is None or current_team.team_id not in question.unlocked_by_team_id)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Question is blocked until {to_ist(question.is_blocked).isoformat()}",
+        )
+
+    if current_team.skip is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Already used skip",
+        )
+
+    # Step 4: Advance question, record skip, log event
+    questions = path_obj.questions
+    if question_id not in questions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Wrong question",
+        )
+
+    idx = questions.index(question_id)
+    if idx >= len(questions) - 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot skip the last question",
+        )
+
+    next_qid = questions[idx + 1]
+
+    skip_log = TeamLog(
+        team_id=current_team.team_id,
+        question_id=question_id,
+        path_id=body.path_id,
+        event_type=QuestionEvent.SKIPPED,
+        created_at=to_ist(body.frontend_timestamp),
+        points=current_team.points,
+    )
+    db.add(skip_log)
+
+    team_updates: dict[str, Any] = {
+        "skip": question_id,
+        "current_question_id": next_qid,
+    }
+    if is_unstarted:
+        team_updates["current_path_id"] = body.path_id
+
+    await db.execute(
+        update(Team)
+        .where(Team.team_id == current_team.team_id)
+        .values(**team_updates)
+    )
+    await db.commit()
+
+    return TeamQuestionSkipOut(
+        message="Question skipped successfully",
+        next_question_id=next_qid,
+        current_points=current_team.points,
     )
