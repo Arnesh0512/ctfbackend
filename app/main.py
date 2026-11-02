@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import HTMLResponse
 
+from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.middleware import OriginGuard
 import app.models.admin
@@ -148,6 +149,11 @@ def create_app() -> FastAPI:
         openapi_url=f"{prefix}/openapi.json" if docs else None,
         swagger_ui_parameters={"persistAuthorization": True},
     )
+
+    @app.middleware("http")
+    async def record_request_time(request: Request, call_next):
+        request.state.received_at = utcnow()
+        return await call_next(request)
 
     if settings.frontend_origins:
         app.add_middleware(

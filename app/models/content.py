@@ -39,7 +39,7 @@ class Question(Base):
     current_points: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     end_point: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
     retries: Mapped[int] = mapped_column(Integer, nullable=False)
-    is_viewed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_viewed: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     first_solved_at: Mapped[datetime | None] = mapped_column(nullable=True)
     first_solved_by_team_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("teams.team_id", ondelete="SET NULL"), nullable=True

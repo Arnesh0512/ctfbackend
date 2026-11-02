@@ -63,7 +63,7 @@ class QuestionDetailOut(BaseModel):
     current_points: Decimal = Field(..., description="Current points")
     end_point: Decimal = Field(..., description="Minimum points floor")
     retries: int = Field(..., description="Allowed retries")
-    is_viewed: bool = Field(..., description="Whether viewed")
+    is_viewed: datetime | None = Field(default=None, description="First viewed timestamp")
     first_solved_at: datetime | None = Field(default=None, description="First solved timestamp")
     first_solved_by_team_id: uuid.UUID | None = Field(default=None, description="First solver team ID")
     is_blocked: datetime | None = Field(default=None, description="Blocked until timestamp")
@@ -111,3 +111,23 @@ class TeamCurrentQuestionOut(BaseModel):
     current_path_id: uuid.UUID | None = Field(
         default=None, description="Current path ID assigned to the team"
     )
+
+
+class TeamQuestionViewIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path_id: uuid.UUID = Field(..., description="Selected route/path ID")
+    frontend_timestamp: datetime = Field(..., description="Client interaction timestamp")
+
+
+class TeamQuestionViewOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    question_id: uuid.UUID
+    title: str
+    monument: str
+    state: str
+    story: str
+    file_path: list[str] | None = None
+    base_points: Decimal
+    is_viewed: datetime | None = None
