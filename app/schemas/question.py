@@ -153,7 +153,7 @@ class TeamQuestionSaveOut(BaseModel):
     next_question_id: uuid.UUID | None = Field(default=None, description="Next question UUID if available")
     has_reached_delhi: bool = Field(default=False, description="Whether the team has reached Delhi")
     points_awarded: Decimal = Field(default=Decimal("0.00"), description="Points awarded for this question")
-    current_points: Decimal = Field(..., description="Updated total team points")
+    points: Decimal = Field(..., description="Updated total team points")
     actions: list[dict[str, str]] = Field(default_factory=list, description="Enabled actions")
     remaining_retries: int | None = Field(default=None, description="Remaining retries if answer is wrong")
 
@@ -178,7 +178,7 @@ class TeamQuestionHintOut(BaseModel):
     hint1: str | None = Field(default=None, description="Hint 1 text if unlocked")
     hint2: str | None = Field(default=None, description="Hint 2 text if unlocked")
     points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for hint purchase")
-    current_points: Decimal = Field(..., description="Updated total team points")
+    points: Decimal = Field(..., description="Updated total team points")
 
 
 class TeamQuestionRetryIn(BaseModel):
@@ -193,7 +193,7 @@ class TeamQuestionRetryOut(BaseModel):
 
     message: str = Field(default="Retry purchased successfully", description="Status message")
     points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for retry purchase")
-    current_points: Decimal = Field(..., description="Updated total team points")
+    points: Decimal = Field(..., description="Updated total team points")
     remaining_retries: int = Field(default=1, description="Remaining retries available after purchase")
 
 
@@ -211,7 +211,7 @@ class TeamQuestionBlockOut(BaseModel):
     message: str = Field(default="Question blocked successfully", description="Status message")
     is_blocked: LocalDatetime = Field(..., description="Blocked until timestamp in IST")
     points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for blocking")
-    current_points: Decimal = Field(..., description="Updated total team points")
+    points: Decimal = Field(..., description="Updated total team points")
 
 
 class TeamQuestionUnblockIn(BaseModel):
@@ -226,7 +226,7 @@ class TeamQuestionUnblockOut(BaseModel):
 
     message: str = Field(default="Question unblocked successfully", description="Status message")
     points_deducted: Decimal = Field(default=Decimal("0.00"), description="Points deducted for unblocking")
-    current_points: Decimal = Field(..., description="Updated total team points")
+    points: Decimal = Field(..., description="Updated total team points")
 
 
 class TeamQuestionSkipIn(BaseModel):
@@ -241,4 +241,4 @@ class TeamQuestionSkipOut(BaseModel):
 
     message: str = Field(default="Question skipped successfully", description="Status message")
     next_question_id: uuid.UUID = Field(..., description="Next question UUID")
-    current_points: Decimal = Field(..., description="Current team points")
+    points: Decimal = Field(..., description="Current team points")

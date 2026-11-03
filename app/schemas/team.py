@@ -94,7 +94,6 @@ class TeamPointOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     points: Decimal = Field(..., description="Current total points of the team")
-    current_points: Decimal = Field(..., description="Current total points of the team")
 
 
 # Team authentication & session models

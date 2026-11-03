@@ -117,4 +117,4 @@ async def get_team_points(
     """Fetch current points for the authenticated team (GET or POST, Requires Team JWT)."""
     team = await db.get(Team, current_team.team_id)
     pts = team.points if team else current_team.points
-    return TeamPointOut(points=pts, current_points=pts)
+    return TeamPointOut(points=pts)

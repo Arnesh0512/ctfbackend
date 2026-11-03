@@ -158,5 +158,4 @@ class TeamPathChangeOut(BaseModel):
     current_path_id: uuid.UUID = Field(..., description="New current path ID")
     current_question_id: uuid.UUID = Field(..., description="New current question ID")
     points: Decimal = Field(..., description="Current team points")
-    current_points: Decimal = Field(..., description="Current team points")
     frozen_until: LocalDatetime | None = Field(default=None, description="Frozen until timestamp (if TIME type)")

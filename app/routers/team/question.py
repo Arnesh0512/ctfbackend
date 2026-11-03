@@ -263,7 +263,7 @@ async def save_question(
         return TeamQuestionSaveOut(
             correct=False,
             message="Answer wrong",
-            current_points=current_team.points,
+            points=current_team.points,
             remaining_retries=max(0, remaining),
         )
 
@@ -315,7 +315,7 @@ async def save_question(
             next_question_id=next_qid,
             has_reached_delhi=False,
             points_awarded=points,
-            current_points=new_points,
+            points=new_points,
             actions=actions,
         )
     else:
@@ -350,7 +350,7 @@ async def save_question(
             next_question_id=None,
             has_reached_delhi=True,
             points_awarded=points,
-            current_points=new_points,
+            points=new_points,
             actions=actions,
         )
 
@@ -490,7 +490,7 @@ async def get_question_hint(
         return TeamQuestionHintOut(
             **cfg["hints"],
             points_deducted=Decimal("0.00"),
-            current_points=current_team.points,
+            points=current_team.points,
         )
 
     # Otherwise, calculate cost and purchase
@@ -541,7 +541,7 @@ async def get_question_hint(
     return TeamQuestionHintOut(
         **cfg["hints"],
         points_deducted=hint_cost,
-        current_points=new_points,
+        points=new_points,
     )
 
 
@@ -676,7 +676,7 @@ async def purchase_question_retry(
     return TeamQuestionRetryOut(
         message="Retry purchased successfully",
         points_deducted=retry_cost,
-        current_points=new_points,
+        points=new_points,
         remaining_retries=1,
     )
 
@@ -851,7 +851,7 @@ async def block_question(
         message="Question blocked successfully",
         is_blocked=blocked_until,
         points_deducted=body.point,
-        current_points=new_points,
+        points=new_points,
     )
 
 
@@ -981,7 +981,7 @@ async def unblock_question(
     return TeamQuestionUnblockOut(
         message="Question unblocked successfully",
         points_deducted=cost,
-        current_points=new_points,
+        points=new_points,
     )
 
 
@@ -1113,5 +1113,5 @@ async def skip_question(
     return TeamQuestionSkipOut(
         message="Question skipped successfully",
         next_question_id=next_qid,
-        current_points=current_team.points,
+        points=current_team.points,
     )

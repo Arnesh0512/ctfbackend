@@ -300,6 +300,5 @@ async def change_team_path(
         current_path_id=body.new_path_id,
         current_question_id=current_ques_id,
         points=new_points,
-        current_points=new_points,
         frozen_until=new_frozen_until,
     )
