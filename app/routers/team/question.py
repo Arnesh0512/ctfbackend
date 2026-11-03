@@ -275,7 +275,7 @@ async def save_question(
 
     # Correct answer!
     calc_points = calculate_question_points(
-        question.is_viewed,
+        question.is_viewed or body.frontend_timestamp,
         game_state.start_at,
         body.frontend_timestamp,
         question.base_points,
@@ -501,7 +501,7 @@ async def get_question_hint(
 
     # Otherwise, calculate cost and purchase
     calc_points = calculate_question_points(
-        question.is_viewed,
+        question.is_viewed or body.frontend_timestamp,
         game_state.start_at,
         body.frontend_timestamp,
         question.base_points,
@@ -642,7 +642,7 @@ async def purchase_question_retry(
 
     # Step 5: Calculate retry cost and purchase
     calc_points = calculate_question_points(
-        question.is_viewed,
+        question.is_viewed or body.frontend_timestamp,
         game_state.start_at,
         body.frontend_timestamp,
         question.base_points,
@@ -807,9 +807,9 @@ async def block_question(
 
     # Step 4: Validate points, calculate block duration, and apply
     calc_orig = calculate_question_points(
-        blocked_question.is_viewed,
+        blocked_question.is_viewed or body.frontend_timestamp,
         game_state.start_at,
-        blocked_question.first_solved_at,
+        body.frontend_timestamp,
         blocked_question.base_points,
         game_state.end_at,
     )
