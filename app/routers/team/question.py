@@ -132,8 +132,26 @@ async def view_question(
     await db.commit()
     await db.refresh(question)
 
-    # Step 5: Return question details
-    return TeamQuestionViewOut.model_validate(question)
+    # Step 5: Return question details with active block status for current team
+    is_blocked_for_team: datetime | None = None
+    if (
+        question.is_blocked is not None
+        and to_ist(question.is_blocked) > to_ist(body.frontend_timestamp)
+        and (question.unlocked_by_team_id is None or current_team.team_id not in question.unlocked_by_team_id)
+    ):
+        is_blocked_for_team = to_ist(question.is_blocked)
+
+    return TeamQuestionViewOut(
+        question_id=question.question_id,
+        title=question.title,
+        monument=question.monument,
+        state=question.state,
+        story=question.story,
+        file_path=question.file_path,
+        base_points=question.base_points,
+        is_viewed=question.is_viewed,
+        is_blocked=is_blocked_for_team,
+    )
 
 
 @router.post("/save/{question_id}", response_model=TeamQuestionSaveOut, summary="Submit answer for a question")
@@ -220,12 +238,12 @@ async def save_question(
     # Step 4: Check if question is blocked
     if (
         question.is_blocked is not None
-        and body.frontend_timestamp < question.is_blocked
+        and to_ist(question.is_blocked) > to_ist(body.frontend_timestamp)
         and (question.unlocked_by_team_id is None or current_team.team_id not in question.unlocked_by_team_id)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Question is blocked until {question.is_blocked.isoformat()}",
+            detail=f"Question is blocked until {to_ist(question.is_blocked).isoformat()}",
         )
 
     # Step 5: Answer evaluation (exact case-sensitive comparison)
@@ -407,12 +425,12 @@ async def get_question_hint(
     # Step 3: Check if question is blocked
     if (
         question.is_blocked is not None
-        and body.frontend_timestamp < question.is_blocked
+        and to_ist(question.is_blocked) > to_ist(body.frontend_timestamp)
         and (question.unlocked_by_team_id is None or current_team.team_id not in question.unlocked_by_team_id)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Question is blocked until {question.is_blocked.isoformat()}",
+            detail=f"Question is blocked until {to_ist(question.is_blocked).isoformat()}",
         )
 
     # Step 4: Hint purchase / view
@@ -592,12 +610,12 @@ async def purchase_question_retry(
     # Step 3: Check if question is blocked
     if (
         question.is_blocked is not None
-        and body.frontend_timestamp < question.is_blocked
+        and to_ist(question.is_blocked) > to_ist(body.frontend_timestamp)
         and (question.unlocked_by_team_id is None or current_team.team_id not in question.unlocked_by_team_id)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Question is blocked until {question.is_blocked.isoformat()}",
+            detail=f"Question is blocked until {to_ist(question.is_blocked).isoformat()}",
         )
 
     # Step 4: Verify current retries are exhausted

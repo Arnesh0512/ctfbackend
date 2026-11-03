@@ -134,6 +134,7 @@ class TeamQuestionViewOut(BaseModel):
     file_path: list[str] | None = None
     base_points: Decimal
     is_viewed: LocalDatetime | None = None
+    is_blocked: LocalDatetime | None = None
 
 
 class TeamQuestionSaveIn(BaseModel):
