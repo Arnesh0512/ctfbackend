@@ -1,4 +1,4 @@
-def calculate_question_points(when_viewed, start_time, current_time, base_points):
+def calculate_question_points(when_viewed, start_time, current_time, base_points, end_time=None):
     pass
 
 

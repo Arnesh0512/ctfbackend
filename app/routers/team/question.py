@@ -261,6 +261,7 @@ async def save_question(
         game_state.start_at,
         body.frontend_timestamp,
         question.base_points,
+        game_state.end_at,
     )
     points = Decimal(str(calc_points)) if calc_points is not None else question.base_points
     new_points = current_team.points + points
@@ -486,6 +487,7 @@ async def get_question_hint(
         game_state.start_at,
         body.frontend_timestamp,
         question.base_points,
+        game_state.end_at,
     )
     points = Decimal(str(calc_points)) if calc_points is not None else question.base_points
 
@@ -626,6 +628,7 @@ async def purchase_question_retry(
         game_state.start_at,
         body.frontend_timestamp,
         question.base_points,
+        game_state.end_at,
     )
     points = Decimal(str(calc_points)) if calc_points is not None else question.base_points
 
@@ -790,6 +793,7 @@ async def block_question(
         game_state.start_at,
         blocked_question.first_solved_at,
         blocked_question.base_points,
+        game_state.end_at,
     )
     orig_points = Decimal(str(calc_orig)) if calc_orig is not None else blocked_question.base_points
 
