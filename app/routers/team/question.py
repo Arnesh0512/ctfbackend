@@ -1,18 +1,12 @@
 from datetime import timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select, update
 
-from app.core.calculate import (
-    calculate_block_time,
-    calculate_hint_value,
-    calculate_question_points,
-    calculate_retry_value,
-    calculate_unblock_cost,
-)
+from app.core.calculate import calculate_question_points
 from app.core.clock import istnow, to_ist, utcnow
 from app.core.events import broadcaster
 from app.core.time import validate_frontend_timestamp
@@ -512,8 +506,7 @@ async def get_question_hint(
     store_item = await db.get(StorePrice, cfg["store_key"])
     multiplier = store_item.value if (store_item and store_item.value is not None) else Decimal("0.00")
 
-    calc_hint = calculate_hint_value(points, multiplier)
-    hint_cost = Decimal(str(calc_hint)) if calc_hint is not None else (points * multiplier)
+    hint_cost = (points * multiplier).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     if current_team.points < hint_cost:
         raise HTTPException(
@@ -653,8 +646,7 @@ async def purchase_question_retry(
     store_item = await db.get(StorePrice, "RETRY")
     multiplier = store_item.value if (store_item and store_item.value is not None) else Decimal("0.00")
 
-    calc_retry = calculate_retry_value(points, multiplier)
-    retry_cost = Decimal(str(calc_retry)) if calc_retry is not None else (points * multiplier)
+    retry_cost = (points * multiplier).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     if current_team.points < retry_cost:
         raise HTTPException(
@@ -830,8 +822,7 @@ async def block_question(
     store_item = await db.get(StorePrice, "BLOCK")
     multiplier = store_item.value if (store_item and store_item.value is not None) else Decimal("0.00")
 
-    calc_block = calculate_block_time(body.point, multiplier)
-    blocked_seconds = int(calc_block) if calc_block is not None else int(body.point * multiplier)
+    blocked_seconds = int(body.point * multiplier)
 
     blocked_until = istnow() + timedelta(seconds=blocked_seconds)
     blocked_question.is_blocked = blocked_until
@@ -949,8 +940,12 @@ async def unblock_question(
     store_item = await db.get(StorePrice, "UNBLOCK")
     multiplier = store_item.value if (store_item and store_item.value is not None) else Decimal("0.00")
 
-    calc_cost = calculate_unblock_cost(rem_seconds, multiplier)
-    cost = Decimal(str(calc_cost)) if calc_cost is not None else Decimal(str(round(rem_seconds))) * multiplier
+    if multiplier > 0:
+        cost = Decimal(str(round(rem_seconds / float(multiplier), 2))).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+    else:
+        cost = Decimal("0.00")
 
     if current_team.points < cost:
         raise HTTPException(

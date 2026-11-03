@@ -69,19 +69,3 @@ def calculate_question_points(
     Xt_clamped = max(X1, min(X0, Xt))
 
     return Decimal(str(round(Xt_clamped, 2))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-
-def calculate_hint_value(point, multiplier):
-    pass
-
-
-def calculate_retry_value(point, multiplier):
-    pass
-
-
-def calculate_block_time(point, multiplier):
-    pass
-
-
-def calculate_unblock_cost(time, multiplier):
-    pass
