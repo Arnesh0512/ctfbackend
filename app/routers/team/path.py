@@ -8,7 +8,7 @@ from sqlalchemy import select, update
 from app.core.clock import istnow, to_ist
 from app.core.time import validate_frontend_timestamp
 from app.deps import DB
-from app.models.content import Path
+from app.models.content import Path, Question
 from app.models.enums import QuestionEvent
 from app.models.game import GameState, StorePrice
 from app.models.logs import TeamLog
@@ -19,6 +19,7 @@ from app.schemas.path import (
     TeamPathChangeIn,
     TeamPathChangeOut,
     TeamPathOut,
+    TeamPathQuestionItem,
 )
 from app.schemas.team import TeamOut
 
@@ -29,13 +30,31 @@ router = APIRouter(prefix="/path", tags=["teams: /path"])
 async def get_team_paths(db: DB) -> list[TeamPathOut]:
     """
     Fetch all paths and return a list of dictionaries containing path_id
-    and the first member of questions (question_id). No JWT authentication required.
+    and question_list with question_id, state, and monument. No JWT authentication required.
     """
     paths = (await db.scalars(select(Path).order_by(Path.path_name.asc()))).all()
+    all_qids = {qid for p in paths if p.questions for qid in p.questions}
+
+    if all_qids:
+        questions = (
+            await db.scalars(select(Question).where(Question.question_id.in_(all_qids)))
+        ).all()
+        q_map = {q.question_id: q for q in questions}
+    else:
+        q_map = {}
+
     return [
         TeamPathOut(
             path_id=p.path_id,
-            question_id=p.questions[0] if (p.questions and len(p.questions) > 0) else None,
+            question_list=[
+                TeamPathQuestionItem(
+                    question_id=qid,
+                    state=q_map[qid].state,
+                    monument=q_map[qid].monument,
+                )
+                for qid in (p.questions or [])
+                if qid in q_map
+            ],
         )
         for p in paths
     ]

@@ -113,11 +113,22 @@ class PathDeleteOut(BaseModel):
     path_id: uuid.UUID = Field(..., description="Deleted path ID")
 
 
+class TeamPathQuestionItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    question_id: uuid.UUID = Field(..., description="Question UUID")
+    state: str = Field(..., description="State name")
+    monument: str = Field(..., description="Monument name")
+
+
 class TeamPathOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     path_id: uuid.UUID = Field(..., description="Path ID")
-    question_id: uuid.UUID | None = Field(..., description="First question ID in the path")
+    question_list: list[TeamPathQuestionItem] = Field(
+        default_factory=list,
+        description="Ordered list of questions in the path with location details",
+    )
 
 
 class TeamCurrentPathOut(BaseModel):
