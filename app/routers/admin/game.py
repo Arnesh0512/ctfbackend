@@ -15,7 +15,16 @@ async def get_state(db: DB) -> GameStateOut:
     game = await db.scalar(select(GameState))
     now = istnow()
 
-    if game and game.paused_until and now < to_ist(game.paused_until):
+    is_paused = False
+    if game and game.pause_start_at:
+        p_start = to_ist(game.pause_start_at)
+        p_end = to_ist(game.pause_end_at) if game.pause_end_at else None
+        if p_end:
+            is_paused = (p_start <= now <= p_end)
+        else:
+            is_paused = (now >= p_start)
+
+    if is_paused:
         message = "PAUSED"
     elif game and to_ist(game.start_at) <= now < to_ist(game.end_at):
         message = "ACTIVE"
@@ -26,6 +35,7 @@ async def get_state(db: DB) -> GameStateOut:
         message=message,
         start_at=to_ist(game.start_at) if game else None,
         end_at=to_ist(game.end_at) if game else None,
-        paused_until=to_ist(game.paused_until) if game else None,
+        pause_start_at=to_ist(game.pause_start_at) if game and game.pause_start_at else None,
+        pause_end_at=to_ist(game.pause_end_at) if game and game.pause_end_at else None,
         last=game.last if game else None,
     )

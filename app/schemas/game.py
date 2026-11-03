@@ -11,7 +11,8 @@ class GameStateOut(BaseModel):
     message: Literal["ACTIVE", "PASSIVE", "PAUSED"]
     start_at: LocalDatetime | None = None
     end_at: LocalDatetime | None = None
-    paused_until: LocalDatetime | None = None
+    pause_start_at: LocalDatetime | None = None
+    pause_end_at: LocalDatetime | None = None
     last: uuid.UUID | None = None
 
 
@@ -34,4 +35,6 @@ class TimeOut(BaseModel):
     message: str
     start_at: LocalDatetime
     end_at: LocalDatetime
-    paused_until: LocalDatetime
+    paused_until: LocalDatetime | None = None
+    pause_start_at: LocalDatetime | None = None
+    pause_end_at: LocalDatetime | None = None

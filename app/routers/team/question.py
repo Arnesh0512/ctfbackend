@@ -87,7 +87,8 @@ async def view_question(
         backend_timestamp=backend_timestamp,
         start_at=game_state.start_at,
         end_at=game_state.end_at,
-        paused_until=game_state.paused_until,
+        pause_start_at=game_state.pause_start_at,
+        pause_end_at=game_state.pause_end_at,
         frozen_until=current_team.frozen_until,
     )
 
@@ -186,7 +187,8 @@ async def save_question(
         backend_timestamp=backend_timestamp,
         start_at=game_state.start_at,
         end_at=game_state.end_at,
-        paused_until=game_state.paused_until,
+        pause_start_at=game_state.pause_start_at,
+        pause_end_at=game_state.pause_end_at,
         frozen_until=current_team.frozen_until,
     )
 
@@ -393,7 +395,8 @@ async def get_question_hint(
         backend_timestamp=backend_timestamp,
         start_at=game_state.start_at,
         end_at=game_state.end_at,
-        paused_until=game_state.paused_until,
+        pause_start_at=game_state.pause_start_at,
+        pause_end_at=game_state.pause_end_at,
         frozen_until=current_team.frozen_until,
     )
 
@@ -583,7 +586,8 @@ async def purchase_question_retry(
         backend_timestamp=backend_timestamp,
         start_at=game_state.start_at,
         end_at=game_state.end_at,
-        paused_until=game_state.paused_until,
+        pause_start_at=game_state.pause_start_at,
+        pause_end_at=game_state.pause_end_at,
         frozen_until=current_team.frozen_until,
     )
 
@@ -720,7 +724,8 @@ async def block_question(
         backend_timestamp=backend_timestamp,
         start_at=game_state.start_at,
         end_at=game_state.end_at,
-        paused_until=game_state.paused_until,
+        pause_start_at=game_state.pause_start_at,
+        pause_end_at=game_state.pause_end_at,
         frozen_until=current_team.frozen_until,
     )
 
@@ -894,7 +899,8 @@ async def unblock_question(
         backend_timestamp=backend_timestamp,
         start_at=game_state.start_at,
         end_at=game_state.end_at,
-        paused_until=game_state.paused_until,
+        pause_start_at=game_state.pause_start_at,
+        pause_end_at=game_state.pause_end_at,
         frozen_until=current_team.frozen_until,
     )
 
@@ -1024,7 +1030,8 @@ async def skip_question(
         backend_timestamp=backend_timestamp,
         start_at=game_state.start_at,
         end_at=game_state.end_at,
-        paused_until=game_state.paused_until,
+        pause_start_at=game_state.pause_start_at,
+        pause_end_at=game_state.pause_end_at,
         frozen_until=current_team.frozen_until,
     )
 

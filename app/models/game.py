@@ -14,8 +14,18 @@ class GameState(Base):
 
     start_at: Mapped[datetime] = mapped_column(primary_key=True)
     end_at: Mapped[datetime] = mapped_column(nullable=False)
-    paused_until: Mapped[datetime] = mapped_column(nullable=False)
+    pause_start_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
+    pause_end_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     last: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, default=None)
+
+    @property
+    def paused_until(self) -> datetime | None:
+        """Compatibility property for legacy code that has not migrated yet."""
+        return self.pause_end_at or self.pause_start_at
+
+    @paused_until.setter
+    def paused_until(self, value: datetime | None) -> None:
+        self.pause_end_at = value
 
 
 class StorePrice(Base):

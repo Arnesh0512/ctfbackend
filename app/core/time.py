@@ -10,7 +10,8 @@ def validate_frontend_timestamp(
     backend_timestamp: datetime,
     start_at: datetime,
     end_at: datetime,
-    paused_until: datetime,
+    pause_start_at: datetime | None,
+    pause_end_at: datetime | None,
     frozen_until: datetime | None,
 ) -> None:
     """
@@ -21,7 +22,8 @@ def validate_frontend_timestamp(
     backend_timestamp = to_ist(backend_timestamp)
     start_at = to_ist(start_at)
     end_at = to_ist(end_at)
-    paused_until = to_ist(paused_until)
+    pause_start_at = to_ist(pause_start_at)
+    pause_end_at = to_ist(pause_end_at)
     frozen_until = to_ist(frozen_until)
     # Condition 1: Difference between frontend and backend timestamp must be less than 1 second
     if abs((backend_timestamp - frontend_timestamp).total_seconds()) >= 1.0:
@@ -37,12 +39,19 @@ def validate_frontend_timestamp(
             detail="Timestamp must be between game start_at and end_at.",
         )
 
-    # Condition 3: frontend_timestamp must not be less than paused_until
-    if frontend_timestamp < paused_until:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Game is currently paused.",
-        )
+    # Condition 3: Check if game is paused at frontend_timestamp
+    if pause_start_at is not None:
+        if pause_end_at is not None:
+            if pause_start_at <= frontend_timestamp <= pause_end_at:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Game is currently paused.",
+                )
+        elif frontend_timestamp >= pause_start_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Game is currently paused.",
+            )
 
     # Condition 4: If frozen_until is not None, frontend_timestamp must not be less than frozen_until
     if frozen_until is not None and frontend_timestamp < frozen_until:

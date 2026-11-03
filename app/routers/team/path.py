@@ -114,7 +114,8 @@ async def change_team_path(
         backend_timestamp=backend_timestamp,
         start_at=game_state.start_at,
         end_at=game_state.end_at,
-        paused_until=game_state.paused_until,
+        pause_start_at=game_state.pause_start_at,
+        pause_end_at=game_state.pause_end_at,
         frozen_until=current_team.frozen_until,
     )
 
