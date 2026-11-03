@@ -89,6 +89,14 @@ class TeamProfileOut(BaseModel):
     leader_details: LeaderDetails = Field(..., description="Details of the team leader")
 
 
+# Team Points Response
+class TeamPointOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    points: Decimal = Field(..., description="Current total points of the team")
+    current_points: Decimal = Field(..., description="Current total points of the team")
+
+
 # Team authentication & session models
 class TeamLogin(BaseModel):
     username: str = Field(..., min_length=1, max_length=64)

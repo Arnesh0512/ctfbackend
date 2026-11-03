@@ -6,7 +6,7 @@ from app.core.cookies import TEAM_COOKIE, set_auth_cookie
 from app.core.supabase_auth import fetch_team_from_postgrest, login_with_supabase, to_auth_email
 from app.deps import DB
 from app.models.team import Team
-from app.schemas.team import LeaderDetails, TeamLoginIn, TeamLoginOut, TeamOut, TeamProfileOut
+from app.schemas.team import LeaderDetails, TeamLoginIn, TeamLoginOut, TeamOut, TeamPointOut, TeamProfileOut
 
 security = HTTPBearer(auto_error=False)
 
@@ -104,3 +104,17 @@ async def get_team_profile(
         team_members=current_team.team_members or [],
         leader_details=current_team.leader_details,
     )
+
+
+# ==========================================
+# Team Route 3: Get Team Points (Requires Team JWT)
+# ==========================================
+@router.api_route("/point", methods=["GET", "POST"], response_model=TeamPointOut, summary="Get Team Points")
+async def get_team_points(
+    current_team: TeamOut = Depends(get_current_team),
+    db: DB = None,
+) -> TeamPointOut:
+    """Fetch current points for the authenticated team (GET or POST, Requires Team JWT)."""
+    team = await db.get(Team, current_team.team_id)
+    pts = team.points if team else current_team.points
+    return TeamPointOut(points=pts, current_points=pts)
